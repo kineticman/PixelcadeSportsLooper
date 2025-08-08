@@ -35,7 +35,6 @@
 - `scores_service_main.py` – Core script that handles ESPN calls and Pixelcade output
 - `pixelcade_sports.ini` – League toggles and display config
 - `logs/` – Log files (ignored by Git)
-- `versions/SportsLooper_v1.0.5.zip` – Packaged release build
 - `CHANGELOG.md` – Version history
 
 ---
