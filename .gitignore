@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Logs
+logs/
+*.log
+
+# Distribution / packaging
+*.zip
+
+# Windows system files
+Thumbs.db
+desktop.ini
+
+# macOS system files
+.DS_Store
+
+# IDE / Editor configs
+.vscode/
+.idea/
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+
+# Swap and backup files
+*.swp
+*.swo
+*.bak
+*.tmp
