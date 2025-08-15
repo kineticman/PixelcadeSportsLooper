@@ -1,8 +1,8 @@
-# SportsLooper
+﻿# SportsLooper
 
 **SportsLooper** is a Python script that cycles sports scores, weather, stocks, and a clock on a Pixelcade LED marquee. It runs as a background service on Windows or Raspberry Pi, pulling live data from the ESPN API and your Pixelcade server. Configuration is done via `sportslooper.ini`, and the script includes robust error handling for offline scenarios.
 
-## Features
+## Features`r`n- **⚠ NEWS Module Status**: The `news` module is a **placeholder** and not fully implemented. When enabled, it only shows a static placeholder message. Real RSS/API integration is planned for a future update.
 - **Dynamic Display**: Cycles through weather, clock, sports, stocks, and news modules.
 - **Sports Scores**: Fetches real-time scores from ESPN for 19 supported leagues.
 - **Configurable**: Enable/disable modules, set durations, and filter teams via `sportslooper.ini`.
@@ -107,27 +107,27 @@
 `sportslooper.ini` settings:
 
 - **[pixelcade]**
-  - `pixelcade_url` — server address (default: `http://localhost:8080`)
-  - `health_check_interval` — retry interval when offline
-  - `health_check_timeout` — timeout per attempt
+  - `pixelcade_url` â€” server address (default: `http://localhost:8080`)
+  - `health_check_interval` â€” retry interval when offline
+  - `health_check_timeout` â€” timeout per attempt
 - **[weather]**
-  - `enabled` — true/false
-  - `zip_code` — e.g., `43016`
-  - `duration` — seconds to display
+  - `enabled` â€” true/false
+  - `zip_code` â€” e.g., `43016`
+  - `duration` â€” seconds to display
 - **[sports]**
-  - `<league>` — enable/disable (e.g., `nfl = true`)
-  - `<league>_teams` — comma-separated abbreviations to filter
-  - `seconds_per_game` — seconds per game
-  - `use_team_filter` — true/false
+  - `<league>` â€” enable/disable (e.g., `nfl = true`)
+  - `<league>_teams` â€” comma-separated abbreviations to filter
+  - `seconds_per_game` â€” seconds per game
+  - `use_team_filter` â€” true/false
 - **[clock]**, **[stocks]**, **[news]**
-  - `enabled` — true/false
-  - `duration` — seconds to display
-  - `tickers` (stocks only) — e.g., `AAPL,GOOGL`
+  - `enabled` â€” true/false
+  - `duration` â€” seconds to display
+  - `tickers` (stocks only) â€” e.g., `AAPL,GOOGL`
 - **[order]**
-  - `sequence` — display order (e.g., `weather,clock,sports,stocks,news`)
+  - `sequence` â€” display order (e.g., `weather,clock,sports,stocks,news`)
 - **[debug]**
-  - `debug_mode` — true/false
-  - `log_level` — DEBUG, INFO, etc.
+  - `debug_mode` â€” true/false
+  - `log_level` â€” DEBUG, INFO, etc.
 
 Restart service after editing:
 - Windows: `net stop SportsLooper && net start SportsLooper`
@@ -135,17 +135,17 @@ Restart service after editing:
 
 ## Usage
 - **Standalone**:  
-  Windows → `python sportslooper.py`  
-  Pi → `python3 sportslooper.py`
+  Windows â†’ `python sportslooper.py`  
+  Pi â†’ `python3 sportslooper.py`
 - **Service Start**:  
-  Windows → `net start SportsLooper`  
-  Pi → `sudo systemctl start sportslooper`
+  Windows â†’ `net start SportsLooper`  
+  Pi â†’ `sudo systemctl start sportslooper`
 - **Logs**: Check `sportslooper.log` and `fallback.log` in the install directory
 
 ## Troubleshooting
-- **Service won’t start**: Check permissions, config file path, and required Python modules.
+- **Service wonâ€™t start**: Check permissions, config file path, and required Python modules.
 - **No logs**: Confirm write permissions for service account.
 - **Pixelcade offline**: Script retries automatically and logs to `fallback.log`.
 
 ## License
-MIT — see [LICENSE](LICENSE)
+MIT â€” see [LICENSE](LICENSE)
