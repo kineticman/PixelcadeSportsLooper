@@ -1,0 +1,13 @@
+﻿# Logs
+*.log
+*.log.*
+fallback.log
+service_error.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS cruft
+.DS_Store
+Thumbs.db
