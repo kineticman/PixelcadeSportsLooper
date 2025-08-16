@@ -1,6 +1,3 @@
-﻿# --- Auto-generated version block (do not edit by hand) ---
-__version__ = "1.0.0"
-__version_date__ = "2025-08-15"
 import configparser
 import requests
 import time
@@ -17,6 +14,10 @@ import win32event
 import servicemanager
 import sys
 import threading
+
+
+__version__ = "1.1"
+__version_date__ = "2025-08-16"
 
 # Get the script's directory for log files
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -287,7 +288,7 @@ def display_module(module, date, stop_event):
                 response.raise_for_status()
                 logging.debug(f"Sending Pixelcade request: {response.request.url}")
                 display_time = len(games) * seconds_per_game
-                display_time = max(display_time, seconds_per_game)  # Ensure at least one gameâ€™s duration
+                display_time = max(display_time, seconds_per_game)  # Ensure at least one game’s duration
                 logging.debug(f"Displaying {league} for {display_time} seconds")
                 if debug_mode:
                     print(f"DEBUG: Displaying {league} with {len(games)} games for {display_time}s")
