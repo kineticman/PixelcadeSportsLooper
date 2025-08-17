@@ -2,8 +2,7 @@
 
 ## [1.3] - 2025-08-17
 ### Fixed
-- ESPN date handling: refreshes the YYYYMMDD date each loop and logs date changes to avoid stale games around midnight rollover.
-- Ensures at least one game's duration is used for league display to prevent zero-second flashes.
+- **ESPN date rollover**: now recalculates the YYYYMMDD date each loop and logs changes, preventing stale schedules past midnight.
+### Added
+- Version constants `__version__ = "1.3"` and `__version_date__ = "2025-08-17"` inside `sportslooper.py`.
 
-### Notes
-- Version bumped in `piVersion.py` and `sportslooper.py` to 1.3.
