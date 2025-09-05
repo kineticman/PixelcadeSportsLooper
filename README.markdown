@@ -30,7 +30,6 @@ The project is configurable via an INI file and supports robust error handling f
   - Windows: Administrator access for service installation.
   - Raspberry Pi: Write access to project directory for `pi` user.
 
-[... installation instructions unchanged ...]
 
 ## Configuration Highlights
 The `sportslooper.ini` file controls behavior. Key settings:
@@ -42,7 +41,7 @@ The `sportslooper.ini` file controls behavior. Key settings:
 
 - **[weather]**:
   - `enabled`: Enable/disable weather (default: `true`).
-  - `zip_code`: ZIP code (e.g., `43016`).
+  - `zip_code`: ZIP code (e.g., `90210`).
   - `duration`: Display time in seconds (default: `10`).
 
 - **[sports]**:
