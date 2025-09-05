@@ -3,7 +3,7 @@
 **SportsLooper** is a Python script that displays sports scores, weather, stock prices, and a clock on a Pixelcade LED marquee. It runs as a background service on Windows or Raspberry Pi (Linux), fetching data from the ESPN API and a Pixelcade server. The project is configurable via an INI file and supports robust error handling for offline scenarios.
 
 ## Features
-- **⚠ NEWS Module Status**: The `news` module is a **placeholder** and not fully implemented. When enabled, it only shows a static placeholder message. Real RSS/API integration is planned for a future update.
+- **⚠ NEWS Module Status**: New in V1.1
 - **Dynamic Display**: Cycles through modules (weather, clock, sports, stocks, news) on a Pixelcade LED marquee.
 - **Sports Scores**: Fetches real-time scores from the ESPN API for 19 leagues (e.g., NFL, NBA, MLB, European soccer).
 - **Configurable Modules**: Enable/disable modules and set display durations via `sportslooper.ini`.
