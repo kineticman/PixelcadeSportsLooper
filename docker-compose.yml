@@ -1,0 +1,7 @@
+services:
+  sportslooper:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./app/config.json:/app/config.json

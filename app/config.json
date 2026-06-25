@@ -1,0 +1,62 @@
+{
+  "pixelcade": {
+    "url": "http://localhost:8080",
+    "health_check_interval": 30,
+    "health_check_timeout": 10
+  },
+  "startup": {
+    "banner": "Brad's Bar and Arcade"
+  },
+  "order": {
+    "sequence": ["news", "weather", "clock", "sports", "stocks"]
+  },
+  "weather": {
+    "enabled": true,
+    "zip_code": "",
+    "duration": 13
+  },
+  "clock": {
+    "enabled": true,
+    "duration": 10
+  },
+  "sports": {
+    "enabled": true,
+    "seconds_per_game": 4,
+    "use_team_filter": true,
+    "leagues": {
+      "nfl":                       {"enabled": true,  "teams": ""},
+      "nba":                       {"enabled": true,  "teams": ""},
+      "nhl":                       {"enabled": true,  "teams": ""},
+      "mlb":                       {"enabled": true,  "teams": ""},
+      "wnba":                      {"enabled": false, "teams": ""},
+      "eng.1":                     {"enabled": true,  "teams": ""},
+      "esp.1":                     {"enabled": true,  "teams": ""},
+      "ger.1":                     {"enabled": true,  "teams": ""},
+      "ita.1":                     {"enabled": true,  "teams": ""},
+      "fra.1":                     {"enabled": true,  "teams": ""},
+      "por.1":                     {"enabled": true,  "teams": ""},
+      "ned.1":                     {"enabled": true,  "teams": ""},
+      "mex.1":                     {"enabled": true,  "teams": ""},
+      "usa.1":                     {"enabled": true,  "teams": ""},
+      "uefa.champions":            {"enabled": true,  "teams": ""},
+      "college-football":          {"enabled": true,  "teams": ""},
+      "mens-college-basketball":   {"enabled": true,  "teams": ""},
+      "womens-college-basketball": {"enabled": false, "teams": ""},
+      "college-baseball":          {"enabled": false, "teams": ""}
+    }
+  },
+  "stocks": {
+    "enabled": true,
+    "tickers": "AAPL,GOOGL,MSFT",
+    "duration": 10
+  },
+  "news": {
+    "enabled": true,
+    "rss_feeds": [
+      "https://www.espn.com/espn/rss/nfl/news",
+      "https://www.espn.com/espn/rss/nba/news"
+    ],
+    "duration_per_feed": 60,
+    "max_total_runtime": 0
+  }
+}

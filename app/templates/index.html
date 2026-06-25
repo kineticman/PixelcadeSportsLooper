@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SportsLooper Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; }
+    .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
+    .status-bar { background: #fff; border-bottom: 1px solid #dee2e6; padding: 8px 16px; font-size: .9rem; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .dot-green { background: #198754; }
+    .dot-red   { background: #dc3545; }
+    .dot-grey  { background: #adb5bd; }
+    .module-card { cursor: default; }
+    .drag-handle { cursor: grab; color: #adb5bd; }
+    .drag-handle:active { cursor: grabbing; }
+    .sequence-item { background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
+                     padding: 10px 14px; margin-bottom: 6px; display: flex;
+                     align-items: center; gap: 10px; user-select: none; }
+    .sequence-item.dragging { opacity: 0.4; }
+    .sequence-item.drag-over { border-color: #0d6efd; background: #e7f1ff; }
+    .league-row { display: flex; align-items: center; gap: 10px; padding: 6px 0;
+                  border-bottom: 1px solid #f0f0f0; }
+    .league-row:last-child { border-bottom: none; }
+    .league-name { width: 220px; font-size: .9rem; }
+    .feed-row { display: flex; gap: 8px; margin-bottom: 6px; }
+    .toast-container { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; }
+    #saveBtn { min-width: 90px; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark px-3">
+  <span class="navbar-brand"><i class="bi bi-display me-2"></i>SportsLooper Admin</span>
+  <button id="saveBtn" class="btn btn-success btn-sm">
+    <i class="bi bi-floppy me-1"></i>Save
+  </button>
+</nav>
+
+<!-- Live status bar -->
+<div class="status-bar d-flex gap-4 align-items-center flex-wrap">
+  <span>
+    <span id="healthDot" class="status-dot dot-grey"></span>
+    Pixelcade: <strong id="healthLabel">checking…</strong>
+  </span>
+  <span>Module: <strong id="currentModule">—</strong></span>
+  <span>ESPN cache: <span id="cacheRefresh">—</span></span>
+</div>
+
+<div class="container-fluid py-3">
+  <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabModules">Modules</button></li>
+    <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tabSports">Sports</button></li>
+    <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tabPixelcade">Pixelcade</button></li>
+    <li class="nav-item"><button class="nav-link"        data-bs-toggle="tab" data-bs-target="#tabSettings">Settings</button></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- ── MODULES TAB ── -->
+    <div class="tab-pane fade show active" id="tabModules">
+      <div class="row g-3">
+
+        <!-- Display order -->
+        <div class="col-lg-4">
+          <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-list-ol me-1"></i>Display Order</div>
+            <div class="card-body">
+              <p class="text-muted small mb-2">Drag to reorder. Only listed modules are shown.</p>
+              <div id="sequenceList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module settings -->
+        <div class="col-lg-8">
+          <div class="row g-3">
+
+            <!-- Weather -->
+            <div class="col-md-6">
+              <div class="card module-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+                  <span><i class="bi bi-cloud-sun me-1"></i>Weather</span>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="weatherEnabled">
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="mb-2">
+                    <label class="form-label small">ZIP Code</label>
+                    <input type="text" class="form-control form-control-sm" id="weatherZip" placeholder="e.g. 90210" maxlength="10">
+                  </div>
+                  <div>
+                    <label class="form-label small">Duration (seconds)</label>
+                    <input type="number" class="form-control form-control-sm" id="weatherDuration" min="1" max="300">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Clock -->
+            <div class="col-md-6">
+              <div class="card module-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+                  <span><i class="bi bi-clock me-1"></i>Clock</span>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="clockEnabled">
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div>
+                    <label class="form-label small">Duration (seconds)</label>
+                    <input type="number" class="form-control form-control-sm" id="clockDuration" min="1" max="300">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stocks -->
+            <div class="col-md-6">
+              <div class="card module-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+                  <span><i class="bi bi-graph-up me-1"></i>Stocks</span>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="stocksEnabled">
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="mb-2">
+                    <label class="form-label small">Tickers (comma-separated)</label>
+                    <input type="text" class="form-control form-control-sm" id="stocksTickers" placeholder="AAPL,GOOGL,MSFT">
+                  </div>
+                  <div>
+                    <label class="form-label small">Duration (seconds)</label>
+                    <input type="number" class="form-control form-control-sm" id="stocksDuration" min="1" max="300">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- News -->
+            <div class="col-md-6">
+              <div class="card module-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+                  <span><i class="bi bi-newspaper me-1"></i>News</span>
+                  <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="newsEnabled">
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="mb-2">
+                    <label class="form-label small">RSS Feeds</label>
+                    <div id="newsFeedsList"></div>
+                    <button class="btn btn-outline-secondary btn-sm mt-1" onclick="addFeed()">
+                      <i class="bi bi-plus"></i> Add Feed
+                    </button>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small">Duration per feed (seconds)</label>
+                    <input type="number" class="form-control form-control-sm" id="newsDuration" min="1" max="600">
+                  </div>
+                  <div>
+                    <label class="form-label small">Max total runtime (0 = unlimited)</label>
+                    <input type="number" class="form-control form-control-sm" id="newsMaxRuntime" min="0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /row -->
+        </div><!-- /col-lg-8 -->
+
+      </div><!-- /row -->
+    </div><!-- /tabModules -->
+
+    <!-- ── SPORTS TAB ── -->
+    <div class="tab-pane fade" id="tabSports">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+          <span><i class="bi bi-trophy me-1"></i>Sports Leagues</span>
+          <div class="d-flex align-items-center gap-3">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="sportsEnabled">
+              <label class="form-check-label small">Module enabled</label>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <label class="form-label small mb-0">Seconds/game</label>
+              <input type="number" class="form-control form-control-sm" id="secondsPerGame" min="1" max="60" style="width:70px">
+            </div>
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="useTeamFilter">
+              <label class="form-check-label small">Team filter</label>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row mb-2">
+            <div class="col" style="max-width:230px"><small class="text-muted fw-semibold">League</small></div>
+            <div class="col-auto" style="width:70px; text-align:center"><small class="text-muted fw-semibold">On</small></div>
+            <div class="col"><small class="text-muted fw-semibold">Team filter (abbreviations, comma-separated)</small></div>
+          </div>
+          <div id="leaguesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PIXELCADE TAB ── -->
+    <div class="tab-pane fade" id="tabPixelcade">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-hdd-network me-1"></i>Pixelcade Server</div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">Server URL</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="pixelcadeUrl" placeholder="http://localhost:8080">
+                  <button class="btn btn-outline-secondary" id="testBtn" onclick="testConnection()">
+                    <i class="bi bi-plug me-1"></i>Test
+                  </button>
+                </div>
+                <div class="form-text">Include scheme and port, e.g. http://localhost:8080</div>
+                <div id="testResult" class="mt-2" style="display:none"></div>
+              </div>
+              <div class="row g-2">
+                <div class="col">
+                  <label class="form-label">Health check interval (s)</label>
+                  <input type="number" class="form-control" id="healthInterval" min="5" max="300">
+                  <div class="form-text">How often the looper checks if Pixelcade is up</div>
+                </div>
+                <div class="col">
+                  <label class="form-label">Request timeout (s)</label>
+                  <input type="number" class="form-control" id="healthTimeout" min="1" max="60">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i>Setup Notes</div>
+            <div class="card-body text-muted small">
+              <p><strong>Not installed yet?</strong> Pixelcade runs as a separate service (<code>pixelweb</code>) on this machine. Once installed and your LED marquee is connected via USB, point the URL above at it and hit Test.</p>
+              <p>Linux x86_64 build: <code>linux_amd64</code> from <code>github.com/alinke/pixelcade-linux-builds</code></p>
+              <p>The installer supports standalone mode (no gaming frontend required).</p>
+              <p class="mb-0">Pixelcade runs on <strong>port 8080</strong> by default. Update the URL above if yours differs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS TAB ── -->
+    <div class="tab-pane fade" id="tabSettings">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-type me-1"></i>Startup Banner</div>
+            <div class="card-body">
+              <div>
+                <label class="form-label">Banner text</label>
+                <input type="text" class="form-control" id="startupBanner" maxlength="100">
+                <div class="form-text">Shown on the LED marquee when SportsLooper starts.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div><!-- /container -->
+
+<!-- Toast notifications -->
+<div class="toast-container">
+  <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMsg">Saved.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const LEAGUE_NAMES = {
+  'nfl':                       'NFL Football',
+  'nba':                       'NBA Basketball',
+  'nhl':                       'NHL Hockey',
+  'mlb':                       'MLB Baseball',
+  'wnba':                      'WNBA Basketball',
+  'eng.1':                     'English Premier League',
+  'esp.1':                     'La Liga (Spain)',
+  'ger.1':                     'Bundesliga (Germany)',
+  'ita.1':                     'Serie A (Italy)',
+  'fra.1':                     'Ligue 1 (France)',
+  'por.1':                     'Primeira Liga (Portugal)',
+  'ned.1':                     'Eredivisie (Netherlands)',
+  'mex.1':                     'Liga MX (Mexico)',
+  'usa.1':                     'MLS (USA)',
+  'uefa.champions':            'UEFA Champions League',
+  'college-football':          'College Football',
+  'mens-college-basketball':   "Men's College Basketball",
+  'womens-college-basketball': "Women's College Basketball",
+  'college-baseball':          'College Baseball',
+};
+
+const MODULE_LABELS = {
+  weather: '☁️ Weather',
+  clock:   '🕐 Clock',
+  sports:  '🏆 Sports',
+  stocks:  '📈 Stocks',
+  news:    '📰 News',
+};
+
+let cfg = {};
+
+async function loadConfig() {
+  const res = await fetch('/api/config');
+  cfg = await res.json();
+  populateAll();
+}
+
+function populateAll() {
+  // Settings
+  document.getElementById('pixelcadeUrl').value    = cfg.pixelcade?.url ?? 'http://localhost:6992';
+  document.getElementById('healthInterval').value  = cfg.pixelcade?.health_check_interval ?? 30;
+  document.getElementById('healthTimeout').value   = cfg.pixelcade?.health_check_timeout ?? 10;
+  document.getElementById('startupBanner').value   = cfg.startup?.banner ?? '';
+
+  // Weather
+  document.getElementById('weatherEnabled').checked  = cfg.weather?.enabled ?? true;
+  document.getElementById('weatherZip').value         = cfg.weather?.zip_code ?? '';
+  document.getElementById('weatherDuration').value    = cfg.weather?.duration ?? 13;
+
+  // Clock
+  document.getElementById('clockEnabled').checked  = cfg.clock?.enabled ?? true;
+  document.getElementById('clockDuration').value   = cfg.clock?.duration ?? 10;
+
+  // Stocks
+  document.getElementById('stocksEnabled').checked  = cfg.stocks?.enabled ?? true;
+  document.getElementById('stocksTickers').value    = cfg.stocks?.tickers ?? '';
+  document.getElementById('stocksDuration').value   = cfg.stocks?.duration ?? 10;
+
+  // News
+  document.getElementById('newsEnabled').checked     = cfg.news?.enabled ?? true;
+  document.getElementById('newsDuration').value      = cfg.news?.duration_per_feed ?? 60;
+  document.getElementById('newsMaxRuntime').value    = cfg.news?.max_total_runtime ?? 0;
+  renderFeeds(cfg.news?.rss_feeds ?? []);
+
+  // Sports
+  document.getElementById('sportsEnabled').checked  = cfg.sports?.enabled ?? true;
+  document.getElementById('secondsPerGame').value   = cfg.sports?.seconds_per_game ?? 4;
+  document.getElementById('useTeamFilter').checked  = cfg.sports?.use_team_filter ?? true;
+  renderLeagues(cfg.sports?.leagues ?? {});
+
+  // Sequence
+  renderSequence(cfg.order?.sequence ?? ['weather','clock','sports','stocks','news']);
+}
+
+// ── Sequence drag-and-drop ──
+function renderSequence(seq) {
+  const list = document.getElementById('sequenceList');
+  list.innerHTML = '';
+  seq.forEach(mod => {
+    const item = document.createElement('div');
+    item.className = 'sequence-item';
+    item.draggable = true;
+    item.dataset.mod = mod;
+    item.innerHTML = `
+      <span class="drag-handle"><i class="bi bi-grip-vertical"></i></span>
+      <span class="flex-grow-1">${MODULE_LABELS[mod] ?? mod}</span>
+      <button class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeFromSequence('${mod}')" title="Remove">
+        <i class="bi bi-x"></i>
+      </button>`;
+    item.addEventListener('dragstart', onDragStart);
+    item.addEventListener('dragover',  onDragOver);
+    item.addEventListener('dragleave', onDragLeave);
+    item.addEventListener('drop',      onDrop);
+    item.addEventListener('dragend',   onDragEnd);
+    list.appendChild(item);
+  });
+
+  // Add-module dropdown
+  const available = Object.keys(MODULE_LABELS).filter(m => !seq.includes(m));
+  if (available.length) {
+    const btn = document.createElement('div');
+    btn.className = 'mt-2';
+    btn.innerHTML = `<select class="form-select form-select-sm" onchange="addToSequence(this)">
+      <option value="">+ Add module…</option>
+      ${available.map(m => `<option value="${m}">${MODULE_LABELS[m]}</option>`).join('')}
+    </select>`;
+    list.appendChild(btn);
+  }
+}
+
+let dragSrc = null;
+function onDragStart(e) { dragSrc = e.currentTarget; e.currentTarget.classList.add('dragging'); }
+function onDragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDragEnd(e)   { e.currentTarget.classList.remove('dragging'); }
+function onDrop(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  target.classList.remove('drag-over');
+  if (!dragSrc || dragSrc === target) return;
+  const list = document.getElementById('sequenceList');
+  const items = [...list.querySelectorAll('.sequence-item')];
+  const srcIdx = items.indexOf(dragSrc);
+  const tgtIdx = items.indexOf(target);
+  if (srcIdx < tgtIdx) target.after(dragSrc); else target.before(dragSrc);
+}
+
+function getSequence() {
+  return [...document.querySelectorAll('#sequenceList .sequence-item')].map(el => el.dataset.mod);
+}
+
+function removeFromSequence(mod) {
+  const seq = getSequence().filter(m => m !== mod);
+  renderSequence(seq);
+}
+
+function addToSequence(sel) {
+  const mod = sel.value;
+  if (!mod) return;
+  renderSequence([...getSequence(), mod]);
+}
+
+// ── Leagues ──
+function renderLeagues(leagues) {
+  const container = document.getElementById('leaguesList');
+  container.innerHTML = '';
+  Object.keys(LEAGUE_NAMES).forEach(key => {
+    const ldata = leagues[key] ?? {enabled: false, teams: ''};
+    const row = document.createElement('div');
+    row.className = 'league-row';
+    row.innerHTML = `
+      <div class="league-name">${LEAGUE_NAMES[key]}</div>
+      <div style="width:70px; text-align:center">
+        <div class="form-check d-inline-block">
+          <input class="form-check-input league-enabled" type="checkbox" data-league="${key}" ${ldata.enabled ? 'checked' : ''}>
+        </div>
+      </div>
+      <div class="flex-grow-1">
+        <input type="text" class="form-control form-control-sm league-teams" data-league="${key}"
+               value="${ldata.teams ?? ''}" placeholder="e.g. NYY,BOS (leave blank for all)">
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+function getLeagues() {
+  const result = {};
+  document.querySelectorAll('.league-enabled').forEach(el => {
+    const key = el.dataset.league;
+    const teams = document.querySelector(`.league-teams[data-league="${key}"]`).value.trim();
+    result[key] = {enabled: el.checked, teams};
+  });
+  return result;
+}
+
+// ── News feeds ──
+function renderFeeds(feeds) {
+  const container = document.getElementById('newsFeedsList');
+  container.innerHTML = '';
+  feeds.forEach((url, i) => {
+    const row = document.createElement('div');
+    row.className = 'feed-row';
+    row.innerHTML = `
+      <input type="url" class="form-control form-control-sm feed-url" value="${url}" placeholder="https://…">
+      <button class="btn btn-outline-danger btn-sm" onclick="this.closest('.feed-row').remove()">
+        <i class="bi bi-trash"></i>
+      </button>`;
+    container.appendChild(row);
+  });
+}
+
+function addFeed() {
+  const row = document.createElement('div');
+  row.className = 'feed-row';
+  row.innerHTML = `
+    <input type="url" class="form-control form-control-sm feed-url" placeholder="https://…">
+    <button class="btn btn-outline-danger btn-sm" onclick="this.closest('.feed-row').remove()">
+      <i class="bi bi-trash"></i>
+    </button>`;
+  document.getElementById('newsFeedsList').appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function getFeeds() {
+  return [...document.querySelectorAll('.feed-url')].map(el => el.value.trim()).filter(Boolean);
+}
+
+// ── Build config from form ──
+function buildConfig() {
+  return {
+    pixelcade: {
+      url: document.getElementById('pixelcadeUrl').value.trim(),
+      health_check_interval: parseInt(document.getElementById('healthInterval').value) || 30,
+      health_check_timeout:  parseInt(document.getElementById('healthTimeout').value)  || 10,
+    },
+    startup: {
+      banner: document.getElementById('startupBanner').value.trim(),
+    },
+    order: {
+      sequence: getSequence(),
+    },
+    weather: {
+      enabled:  document.getElementById('weatherEnabled').checked,
+      zip_code: document.getElementById('weatherZip').value.trim(),
+      duration: parseInt(document.getElementById('weatherDuration').value) || 13,
+    },
+    clock: {
+      enabled:  document.getElementById('clockEnabled').checked,
+      duration: parseInt(document.getElementById('clockDuration').value) || 10,
+    },
+    sports: {
+      enabled:         document.getElementById('sportsEnabled').checked,
+      seconds_per_game: parseInt(document.getElementById('secondsPerGame').value) || 4,
+      use_team_filter:  document.getElementById('useTeamFilter').checked,
+      leagues:          getLeagues(),
+    },
+    stocks: {
+      enabled:  document.getElementById('stocksEnabled').checked,
+      tickers:  document.getElementById('stocksTickers').value.trim(),
+      duration: parseInt(document.getElementById('stocksDuration').value) || 10,
+    },
+    news: {
+      enabled:          document.getElementById('newsEnabled').checked,
+      rss_feeds:        getFeeds(),
+      duration_per_feed: parseInt(document.getElementById('newsDuration').value) || 60,
+      max_total_runtime: parseInt(document.getElementById('newsMaxRuntime').value) || 0,
+    },
+  };
+}
+
+// ── Pixelcade connection test ──
+async function testConnection() {
+  const btn = document.getElementById('testBtn');
+  const result = document.getElementById('testResult');
+  const url = document.getElementById('pixelcadeUrl').value.trim();
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  result.style.display = 'none';
+  try {
+    const res = await fetch('/api/test-pixelcade', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url}),
+    });
+    const data = await res.json();
+    result.style.display = 'block';
+    if (data.ok) {
+      result.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Connected!</span>';
+    } else {
+      result.innerHTML = `<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>${data.error}</span>`;
+    }
+  } catch (e) {
+    result.style.display = 'block';
+    result.innerHTML = `<span class="badge bg-danger">Request failed: ${e}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test';
+  }
+}
+
+// ── Save ──
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(buildConfig()),
+    });
+    const data = await res.json();
+    showToast(data.ok ? 'Settings saved. Takes effect on next module cycle.' : `Error: ${data.error}`, data.ok ? 'success' : 'danger');
+  } catch (e) {
+    showToast(`Save failed: ${e}`, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Save';
+  }
+});
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.className = `toast align-items-center text-bg-${type} border-0`;
+  document.getElementById('toastMsg').textContent = msg;
+  new bootstrap.Toast(toast, {delay: 3500}).show();
+}
+
+// ── Status polling ──
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const s = await res.json();
+    const dot   = document.getElementById('healthDot');
+    const label = document.getElementById('healthLabel');
+    if (s.pixelcade_healthy) {
+      dot.className = 'status-dot dot-green'; label.textContent = 'Online';
+    } else {
+      dot.className = 'status-dot dot-red'; label.textContent = 'Offline';
+    }
+    document.getElementById('currentModule').textContent = s.current_module ?? '—';
+    if (s.last_cache_refresh) {
+      const d = new Date(s.last_cache_refresh);
+      document.getElementById('cacheRefresh').textContent = d.toLocaleTimeString();
+    } else {
+      document.getElementById('cacheRefresh').textContent = 'not yet';
+    }
+  } catch (_) {}
+}
+
+loadConfig();
+pollStatus();
+setInterval(pollStatus, 5000);
+</script>
+</body>
+</html>

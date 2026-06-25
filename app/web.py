@@ -1,0 +1,74 @@
+import json
+import os
+import threading
+
+import requests as http_requests
+from flask import Flask, jsonify, render_template, request
+
+app = Flask(__name__)
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, 'config.json')
+
+# Injected by main.py before the server starts
+_config_lock: threading.Lock = None
+_status: dict = None
+_status_lock: threading.Lock = None
+
+
+def init(config_lock, status, status_lock):
+    global _config_lock, _status, _status_lock
+    _config_lock = config_lock
+    _status = status
+    _status_lock = status_lock
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    with _config_lock:
+        with open(CONFIG_PATH) as f:
+            return jsonify(json.load(f))
+
+
+@app.route('/api/config', methods=['POST'])
+def save_config():
+    data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        return jsonify({'ok': False, 'error': 'Invalid JSON'}), 400
+    with _config_lock:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(data, f, indent=2)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/status')
+def get_status():
+    with _status_lock:
+        return jsonify(dict(_status))
+
+
+@app.route('/api/test-pixelcade', methods=['POST'])
+def test_pixelcade():
+    data = request.get_json(force=True)
+    url = (data.get('url') or '').rstrip('/')
+    if not url:
+        return jsonify({'ok': False, 'error': 'No URL provided'})
+    try:
+        resp = http_requests.get(
+            f"{url}/text",
+            params={'t': 'health', 'l': '1', 'ledonly': 'true'},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        return jsonify({'ok': True, 'status': resp.status_code})
+    except http_requests.exceptions.ConnectionError:
+        return jsonify({'ok': False, 'error': f'Connection refused at {url}'})
+    except http_requests.exceptions.Timeout:
+        return jsonify({'ok': False, 'error': 'Timed out after 5s'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
