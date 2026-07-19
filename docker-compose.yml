@@ -1,4 +1,14 @@
 services:
+  pixelweb:
+    build: .
+    command: /pixelcade/pixelweb -port 8080 -p /pixelcade -d /dev/ttyACM0 -devicescan
+    network_mode: host
+    restart: unless-stopped
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    volumes:
+      - ./pixelcade-runtime:/pixelcade
+
   sportslooper:
     build: .
     network_mode: host

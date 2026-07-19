@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.log
+*.log.*
+.git/
+pixelcade.ini
+pixelcade-runtime/
+setup-retropie.sh

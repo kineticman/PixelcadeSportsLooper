@@ -60,8 +60,7 @@ def test_pixelcade():
         return jsonify({'ok': False, 'error': 'No URL provided'})
     try:
         resp = http_requests.get(
-            f"{url}/text",
-            params={'t': 'health', 'l': '1', 'ledonly': 'true'},
+            f"{url}/info",
             timeout=5,
         )
         resp.raise_for_status()

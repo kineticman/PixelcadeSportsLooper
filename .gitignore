@@ -4,6 +4,10 @@
 fallback.log
 service_error.log
 
+# Local Pixelcade listener runtime
+pixelcade.ini
+pixelcade-runtime/
+
 # Python cache
 __pycache__/
 *.pyc

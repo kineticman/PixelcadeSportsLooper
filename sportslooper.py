@@ -124,7 +124,7 @@ def check_pixelcade_health():
         bool: True if the server responds successfully, False after retries fail.
     """
     try:
-        response = requests.get(f"{pixelcade_url}/text", params={'t': 'health', 'l': '1', 'ledonly': 'true'}, timeout=health_check_interval)
+        response = requests.get(f"{pixelcade_url}/info", timeout=health_check_timeout)
         response.raise_for_status()
         logging.debug("Pixelcade server is responsive")
         return True

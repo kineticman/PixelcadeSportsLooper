@@ -59,8 +59,7 @@ def load_config():
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 def _pixelcade_health_request(pixelcade_url, timeout):
     resp = requests.get(
-        f"{pixelcade_url}/text",
-        params={'t': 'health', 'l': '1', 'ledonly': 'true'},
+        f"{pixelcade_url}/info",
         timeout=timeout,
     )
     resp.raise_for_status()
