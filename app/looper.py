@@ -328,6 +328,9 @@ def display_module(module, cfg, date, stop_event):
             logging.info(f"Waiting {startup_grace_period}s for Pixelcade hardware to settle after reconnect")
             if _sleep(startup_grace_period, stop_event):
                 return
+            logging.info("Pixelcade recovered and ready")
+        elif not was_healthy:
+            logging.info("Pixelcade recovered and ready")
     except (requests.RequestException, tenacity.RetryError) as e:
         logging.warning(f"Skipping {module}: Pixelcade offline ({e})")
         with status_lock:
@@ -385,6 +388,7 @@ def main_loop(stop_event):
         logging.info(f"Waiting {startup_grace_period}s for Pixelcade hardware to settle")
         if _sleep(startup_grace_period, stop_event):
             return
+        logging.info("Pixelcade startup grace period complete")
 
     try:
         check_pixelcade_health(pixelcade_url, timeout)
