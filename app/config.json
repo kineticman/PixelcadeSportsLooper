@@ -2,7 +2,8 @@
   "pixelcade": {
     "url": "http://localhost:8080",
     "health_check_interval": 30,
-    "health_check_timeout": 10
+    "health_check_timeout": 10,
+    "startup_grace_period": 15
   },
   "startup": {
     "banner": "Brad's Bar and Arcade"
@@ -22,7 +23,14 @@
   },
   "clock": {
     "enabled": true,
-    "duration": 10
+    "duration": 10,
+    "type": "frogger",
+    "color": "green",
+    "twelve_hour": true,
+    "show_seconds": true,
+    "show_milliseconds": false,
+    "auto_cycle": false,
+    "cycle_frequency": "60s"
   },
   "sports": {
     "enabled": true,
@@ -120,5 +128,89 @@
     ],
     "duration_per_feed": 60,
     "max_total_runtime": 0
+  },
+  "youtube": {
+    "enabled": false,
+    "duration": 10
+  },
+  "calendar": {
+    "enabled": false,
+    "duration": 10
+  },
+  "spotify": {
+    "enabled": false,
+    "duration": 300
+  },
+  "lastfm": {
+    "enabled": false,
+    "duration": 300
+  },
+  "plex": {
+    "enabled": false,
+    "duration": 300
+  },
+  "yahoofantasy": {
+    "enabled": false,
+    "duration": 60
+  },
+  "netflix": {
+    "enabled": true,
+    "duration": 10
+  },
+  "worldclock": {
+    "enabled": true,
+    "duration": 10
+  },
+  "commute": {
+    "enabled": false,
+    "duration": 10
+  },
+  "horoscope": {
+    "enabled": false,
+    "duration": 10
+  },
+  "lastgame": {
+    "enabled": false,
+    "duration": 5
+  },
+  "whattowatch": {
+    "enabled": true,
+    "duration": 60
+  },
+  "mediaserver": {
+    "enabled": false,
+    "duration": 300
+  },
+  "trivia": {
+    "enabled": true,
+    "duration": 30
+  },
+  "twitch": {
+    "enabled": false,
+    "duration": 60
+  },
+  "countdown": {
+    "enabled": false,
+    "duration": 30
+  },
+  "dayinretro": {
+    "enabled": true,
+    "duration": 30
+  },
+  "retroachievements": {
+    "enabled": false,
+    "duration": 30
+  },
+  "earthquake": {
+    "enabled": true,
+    "duration": 30
+  },
+  "f1": {
+    "enabled": true,
+    "duration": 30
+  },
+  "flighttracker": {
+    "enabled": false,
+    "duration": 30
   }
 }

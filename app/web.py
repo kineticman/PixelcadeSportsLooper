@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+from urllib.parse import urljoin
 
 import requests as http_requests
 from flask import Flask, jsonify, render_template, request
@@ -50,6 +51,33 @@ def save_config():
 def get_status():
     with _status_lock:
         return jsonify(dict(_status))
+
+
+
+
+@app.route('/api/pixelcade-command', methods=['POST'])
+def send_pixelcade_command():
+    data = request.get_json(force=True)
+    base_url = (data.get('url') or '').rstrip('/')
+    path = (data.get('path') or '').strip()
+    if not base_url:
+        return jsonify({'ok': False, 'error': 'No Pixelcade URL provided'}), 400
+    if not path.startswith('/') or path.startswith('//') or '..' in path:
+        return jsonify({'ok': False, 'error': 'Command path must start with / and stay relative'}), 400
+    try:
+        resp = http_requests.get(urljoin(f'{base_url}/', path.lstrip('/')), timeout=10)
+        body = resp.text[:2000]
+        return jsonify({
+            'ok': resp.ok,
+            'status': resp.status_code,
+            'body': body,
+        }), (200 if resp.ok else 502)
+    except http_requests.exceptions.ConnectionError:
+        return jsonify({'ok': False, 'error': f'Connection refused at {base_url}'})
+    except http_requests.exceptions.Timeout:
+        return jsonify({'ok': False, 'error': 'Timed out after 10s'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)})
 
 
 @app.route('/api/test-pixelcade', methods=['POST'])

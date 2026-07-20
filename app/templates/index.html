@@ -29,6 +29,8 @@
     .feed-row { display: flex; gap: 8px; margin-bottom: 6px; }
     .toast-container { position: fixed; bottom: 1rem; right: 1rem; z-index: 9999; }
     #saveBtn { min-width: 90px; }
+    .widget-row { display: grid; grid-template-columns: minmax(170px, 1fr) 76px 70px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid #f0f0f0; }
+    .widget-row:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -111,9 +113,86 @@
                   </div>
                 </div>
                 <div class="card-body">
-                  <div>
-                    <label class="form-label small">Duration (seconds)</label>
-                    <input type="number" class="form-control form-control-sm" id="clockDuration" min="1" max="300">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small">Duration (seconds)</label>
+                      <input type="number" class="form-control form-control-sm" id="clockDuration" min="1" max="300">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small">Clock type</label>
+                      <select class="form-select form-select-sm" id="clockType">
+                        <option value="normal">Digital Clock</option>
+                        <option value="word">Word Clock</option>
+                        <option value="retro">Retro Arcade (80s)</option>
+                        <option value="pacman">Pac-Man</option>
+                        <option value="mspacman">Ms. Pac-Man</option>
+                        <option value="galaga">Galaga</option>
+                        <option value="galaga2">Galaga 2</option>
+                        <option value="arkanoid">Arkanoid</option>
+                        <option value="arkanoid2">Arkanoid 2</option>
+                        <option value="tron">Tron</option>
+                        <option value="tempest">Tempest</option>
+                        <option value="burgertime">Burger Time</option>
+                        <option value="dkong">Donkey Kong</option>
+                        <option value="dkong2">Donkey Kong 2</option>
+                        <option value="invaders">Space Invaders</option>
+                        <option value="centipede">Centipede</option>
+                        <option value="asteroids">Asteroids</option>
+                        <option value="digdug">Dig Dug</option>
+                        <option value="digdug2">Dig Dug 2</option>
+                        <option value="frogger">Frogger</option>
+                        <option value="frogger2">Frogger 2</option>
+                        <option value="tetris">Tetris</option>
+                        <option value="tetris2">Tetris 2</option>
+                        <option value="puzzlebobble">Puzzle Bobble</option>
+                        <option value="castlevania">Castlevania</option>
+                        <option value="metroid">Metroid</option>
+                        <option value="sf2">Street Fighter</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small">Color</label>
+                      <select class="form-select form-select-sm" id="clockColor">
+                        <option value="green">Green</option>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="white">White</option>
+                        <option value="cyan">Cyan</option>
+                        <option value="magenta">Magenta</option>
+                        <option value="orange">Orange</option>
+                      </select>
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small">Cycle frequency</label>
+                      <select class="form-select form-select-sm" id="clockCycleFrequency">
+                        <option value="30s">30s</option>
+                        <option value="60s">60s</option>
+                        <option value="5m">5m</option>
+                        <option value="10m">10m</option>
+                        <option value="15m">15m</option>
+                        <option value="30m">30m</option>
+                        <option value="1h">1h</option>
+                      </select>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-3 mt-1">
+                      <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="clockTwelveHour">
+                        <label class="form-check-label small" for="clockTwelveHour">12-hour</label>
+                      </div>
+                      <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="clockShowSeconds">
+                        <label class="form-check-label small" for="clockShowSeconds">Seconds</label>
+                      </div>
+                      <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="clockShowMilliseconds">
+                        <label class="form-check-label small" for="clockShowMilliseconds">Milliseconds</label>
+                      </div>
+                      <div class="form-check form-check-sm">
+                        <input class="form-check-input" type="checkbox" id="clockAutoCycle">
+                        <label class="form-check-label small" for="clockAutoCycle">Auto-cycle types</label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -166,6 +245,26 @@
                     <label class="form-label small">Max total runtime (0 = unlimited)</label>
                     <input type="number" class="form-control form-control-sm" id="newsMaxRuntime" min="0">
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pixelcade Widgets -->
+            <div class="col-12">
+              <div class="card module-card">
+                <div class="card-header fw-semibold">
+                  <i class="bi bi-grid-3x3-gap me-1"></i>Pixelcade Widgets
+                </div>
+                <div class="card-body">
+                  <div class="row g-3">
+                    <div class="col-lg-6">
+                      <div id="widgetListA"></div>
+                    </div>
+                    <div class="col-lg-6">
+                      <div id="widgetListB"></div>
+                    </div>
+                  </div>
+                  <div class="form-text mt-2">OAuth-backed widgets such as Plex, YouTube, Spotify, RetroAchievements, and media services must be configured in Pixelcade Companion before they can display data.</div>
                 </div>
               </div>
             </div>
@@ -250,6 +349,23 @@
             </div>
           </div>
         </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-terminal me-1"></i>Manual Command</div>
+            <div class="card-body">
+              <label class="form-label">Pixelcade path</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="manualCommandPath" placeholder="/text?t=HELLO&c=00ff00&l=2">
+                <button class="btn btn-outline-primary" id="manualCommandBtn" onclick="sendManualCommand()">
+                  <i class="bi bi-send me-1"></i>Send
+                </button>
+              </div>
+              <div class="form-text">Examples: <code>/plex</code>, <code>/f1</code>, <code>/dayinretro</code>, <code>/arcade/stream/mame/pacman</code></div>
+              <pre id="manualCommandResult" class="bg-light border rounded p-2 mt-2 small" style="display:none; max-height:180px; overflow:auto"></pre>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -308,12 +424,37 @@ const LEAGUE_NAMES = {
   'college-baseball':          'College Baseball',
 };
 
+const WIDGET_MODULES = {
+  youtube:           {label: 'YouTube Stats', duration: 10},
+  calendar:          {label: 'Calendar Events', duration: 10},
+  spotify:           {label: 'Spotify Now Playing', duration: 300},
+  lastfm:            {label: 'Last.fm Now Playing', duration: 300},
+  plex:              {label: 'Plex Now Playing', duration: 300},
+  yahoofantasy:      {label: 'Yahoo Fantasy', duration: 60},
+  netflix:           {label: 'Netflix Top 10', duration: 10},
+  worldclock:        {label: 'World Clock', duration: 10},
+  commute:           {label: 'Commute Traffic', duration: 10},
+  horoscope:         {label: 'Horoscope', duration: 10},
+  lastgame:          {label: 'Last Game Marquee', duration: 5},
+  whattowatch:       {label: 'What to Watch', duration: 60},
+  mediaserver:       {label: 'Emby/Jellyfin Now Playing', duration: 300},
+  trivia:            {label: 'Retro Trivia', duration: 30},
+  twitch:            {label: 'Twitch Live', duration: 60},
+  countdown:         {label: 'Countdown', duration: 30},
+  dayinretro:        {label: 'This Day in Retro', duration: 30},
+  retroachievements: {label: 'RetroAchievements', duration: 30},
+  earthquake:        {label: 'Earthquake Monitor', duration: 30},
+  f1:                {label: 'Formula 1', duration: 30},
+  flighttracker:     {label: 'Planes Overhead', duration: 30},
+};
+
 const MODULE_LABELS = {
-  weather: '☁️ Weather',
-  clock:   '🕐 Clock',
-  sports:  '🏆 Sports',
-  stocks:  '📈 Stocks',
-  news:    '📰 News',
+  weather: 'Weather',
+  clock:   'Clock',
+  sports:  'Sports',
+  stocks:  'Stocks',
+  news:    'News',
+  ...Object.fromEntries(Object.entries(WIDGET_MODULES).map(([key, val]) => [key, val.label])),
 };
 
 let cfg = {};
@@ -339,6 +480,13 @@ function populateAll() {
   // Clock
   document.getElementById('clockEnabled').checked  = cfg.clock?.enabled ?? true;
   document.getElementById('clockDuration').value   = cfg.clock?.duration ?? 10;
+  document.getElementById('clockType').value       = cfg.clock?.type ?? 'tron';
+  document.getElementById('clockColor').value      = cfg.clock?.color ?? 'green';
+  document.getElementById('clockTwelveHour').checked = cfg.clock?.twelve_hour ?? true;
+  document.getElementById('clockShowSeconds').checked = cfg.clock?.show_seconds ?? true;
+  document.getElementById('clockShowMilliseconds').checked = cfg.clock?.show_milliseconds ?? false;
+  document.getElementById('clockAutoCycle').checked = cfg.clock?.auto_cycle ?? false;
+  document.getElementById('clockCycleFrequency').value = cfg.clock?.cycle_frequency ?? '60s';
 
   // Stocks
   document.getElementById('stocksEnabled').checked  = cfg.stocks?.enabled ?? true;
@@ -351,6 +499,8 @@ function populateAll() {
   document.getElementById('newsMaxRuntime').value    = cfg.news?.max_total_runtime ?? 0;
   renderFeeds(cfg.news?.rss_feeds ?? []);
 
+  renderWidgetCards();
+
   // Sports
   document.getElementById('sportsEnabled').checked  = cfg.sports?.enabled ?? true;
   document.getElementById('secondsPerGame').value   = cfg.sports?.seconds_per_game ?? 4;
@@ -359,6 +509,40 @@ function populateAll() {
 
   // Sequence
   renderSequence(cfg.order?.sequence ?? ['weather','clock','sports','stocks','news']);
+}
+
+function renderWidgetCards() {
+  const entries = Object.entries(WIDGET_MODULES);
+  const splitAt = Math.ceil(entries.length / 2);
+  [['widgetListA', entries.slice(0, splitAt)], ['widgetListB', entries.slice(splitAt)]].forEach(([id, items]) => {
+    const container = document.getElementById(id);
+    container.innerHTML = '';
+    items.forEach(([key, meta]) => {
+      const mod = cfg[key] ?? {};
+      const row = document.createElement('div');
+      row.className = 'widget-row';
+      row.innerHTML = `
+        <div>
+          <div class="fw-semibold small">${meta.label}</div>
+          <div class="text-muted small"><code>/${key}</code></div>
+        </div>
+        <input type="number" class="form-control form-control-sm widget-duration" data-widget="${key}" min="1" max="600" value="${mod.duration ?? meta.duration}">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input widget-enabled" type="checkbox" data-widget="${key}" ${mod.enabled ? 'checked' : ''}>
+        </div>`;
+      container.appendChild(row);
+    });
+  });
+}
+
+function getWidgetConfig() {
+  const result = {};
+  Object.keys(WIDGET_MODULES).forEach(key => {
+    const enabled = document.querySelector(`.widget-enabled[data-widget="${key}"]`)?.checked ?? false;
+    const duration = parseInt(document.querySelector(`.widget-duration[data-widget="${key}"]`)?.value) || WIDGET_MODULES[key].duration;
+    result[key] = {enabled, duration};
+  });
+  return result;
 }
 
 // ── Sequence drag-and-drop ──
@@ -516,6 +700,13 @@ function buildConfig() {
     clock: {
       enabled:  document.getElementById('clockEnabled').checked,
       duration: parseInt(document.getElementById('clockDuration').value) || 10,
+      type: document.getElementById('clockType').value.trim() || 'tron',
+      color: document.getElementById('clockColor').value,
+      twelve_hour: document.getElementById('clockTwelveHour').checked,
+      show_seconds: document.getElementById('clockShowSeconds').checked,
+      show_milliseconds: document.getElementById('clockShowMilliseconds').checked,
+      auto_cycle: document.getElementById('clockAutoCycle').checked,
+      cycle_frequency: document.getElementById('clockCycleFrequency').value || '60s',
     },
     sports: {
       enabled:         document.getElementById('sportsEnabled').checked,
@@ -534,6 +725,7 @@ function buildConfig() {
       duration_per_feed: parseInt(document.getElementById('newsDuration').value) || 60,
       max_total_runtime: parseInt(document.getElementById('newsMaxRuntime').value) || 0,
     },
+    ...getWidgetConfig(),
   };
 }
 
@@ -564,6 +756,34 @@ async function testConnection() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test';
+  }
+}
+
+async function sendManualCommand() {
+  const btn = document.getElementById('manualCommandBtn');
+  const result = document.getElementById('manualCommandResult');
+  const path = document.getElementById('manualCommandPath').value.trim();
+  const url = document.getElementById('pixelcadeUrl').value.trim();
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  result.style.display = 'none';
+  try {
+    const res = await fetch('/api/pixelcade-command', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url, path}),
+    });
+    const data = await res.json();
+    result.style.display = 'block';
+    result.textContent = data.ok
+      ? `Status ${data.status}\n${data.body || '(no response body)'}`
+      : `Error${data.status ? ` ${data.status}` : ''}: ${data.error || data.body}`;
+  } catch (e) {
+    result.style.display = 'block';
+    result.textContent = `Request failed: ${e}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
   }
 }
 

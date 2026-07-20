@@ -3,6 +3,7 @@ import time
 import logging
 import os
 import json
+import glob
 import threading
 from datetime import datetime, timedelta
 
@@ -46,6 +47,30 @@ SUPPORTED_LEAGUES = {
 
 ESPN_BASE_URL = 'https://site.api.espn.com/apis/site/v2/sports'
 
+PIXELCADE_WIDGET_MODULES = {
+    'youtube': {'endpoint': 'youtube', 'default_duration': 10},
+    'calendar': {'endpoint': 'calendar', 'default_duration': 10},
+    'spotify': {'endpoint': 'spotify', 'default_duration': 300},
+    'lastfm': {'endpoint': 'lastfm', 'default_duration': 300},
+    'plex': {'endpoint': 'plex', 'default_duration': 300},
+    'yahoofantasy': {'endpoint': 'yahoofantasy', 'default_duration': 60},
+    'netflix': {'endpoint': 'netflix', 'default_duration': 10},
+    'worldclock': {'endpoint': 'worldclock', 'default_duration': 10},
+    'commute': {'endpoint': 'commute', 'default_duration': 10},
+    'horoscope': {'endpoint': 'horoscope', 'default_duration': 10},
+    'lastgame': {'endpoint': 'lastgame', 'default_duration': 5},
+    'whattowatch': {'endpoint': 'whattowatch', 'default_duration': 60},
+    'mediaserver': {'endpoint': 'mediaserver', 'default_duration': 300},
+    'trivia': {'endpoint': 'trivia', 'default_duration': 30},
+    'twitch': {'endpoint': 'twitch', 'default_duration': 60},
+    'countdown': {'endpoint': 'countdown', 'default_duration': 30},
+    'dayinretro': {'endpoint': 'dayinretro', 'default_duration': 30},
+    'retroachievements': {'endpoint': 'retroachievements', 'default_duration': 30},
+    'earthquake': {'endpoint': 'earthquake', 'default_duration': 30},
+    'f1': {'endpoint': 'f1', 'default_duration': 30},
+    'flighttracker': {'endpoint': 'flighttracker', 'default_duration': 30},
+}
+
 game_cache = {}
 cache_expiry = datetime.now()
 
@@ -63,6 +88,21 @@ def _pixelcade_health_request(pixelcade_url, timeout):
         timeout=timeout,
     )
     resp.raise_for_status()
+    info = resp.json()
+    if not info.get('ledActive') or not info.get('hardwareID') or not info.get('firmwareVersion'):
+        raise requests.RequestException('Pixelcade LED hardware is not initialized')
+    if not _serial_device_present():
+        raise requests.RequestException('Pixelcade serial device is not present')
+
+
+def _serial_device_present():
+    for root in ('/host-dev', '/dev'):
+        if not os.path.isdir(root):
+            continue
+        for pattern in ('ttyACM*', 'ttyUSB*'):
+            if glob.glob(os.path.join(root, pattern)):
+                return True
+    return False
 
 
 def check_pixelcade_health(pixelcade_url, timeout):
@@ -117,9 +157,34 @@ def _display_weather(cfg, pixelcade_url, stop_event):
 
 def _display_clock(cfg, pixelcade_url, stop_event):
     mod = cfg.get('clock', {})
+    params = {
+        'ledonly': 'true',
+        '12h': str(mod.get('twelve_hour', True)).lower(),
+        'showSeconds': str(mod.get('show_seconds', True)).lower(),
+        'showMilliseconds': str(mod.get('show_milliseconds', False)).lower(),
+    }
+
+    color = str(mod.get('color', 'green')).strip()
+    if color:
+        params['color'] = color
+
+    clock_type = str(mod.get('type', '')).strip()
+    if clock_type:
+        params['clockType'] = clock_type
+
+    if mod.get('auto_cycle', False):
+        params['autoCycle'] = 'true'
+        cycle_frequency = str(mod.get('cycle_frequency', '60s')).strip()
+        if cycle_frequency:
+            params['cycleFrequency'] = cycle_frequency
+
+    extra_params = mod.get('params', {})
+    if isinstance(extra_params, dict):
+        params.update({k: v for k, v in extra_params.items() if v not in (None, '')})
+
     resp = requests.get(
         f"{pixelcade_url}/clock",
-        params={'12h': 'true', 'showSeconds': 'true', 'color': 'green', 'ledonly': 'true'},
+        params=params,
         timeout=5,
     )
     resp.raise_for_status()
@@ -181,6 +246,25 @@ def _display_stocks(cfg, pixelcade_url, stop_event):
     _sleep(mod.get('duration', 10), stop_event)
 
 
+def _display_pixelcade_widget(module, cfg, pixelcade_url, stop_event):
+    widget = PIXELCADE_WIDGET_MODULES[module]
+    mod = cfg.get(module, {})
+    params = {'ledonly': 'true'}
+    if mod.get('nointerrupt', False):
+        params['nointerrupt'] = 'true'
+    extra_params = mod.get('params', {})
+    if isinstance(extra_params, dict):
+        params.update({k: v for k, v in extra_params.items() if v not in (None, '')})
+
+    resp = requests.get(
+        f"{pixelcade_url}/{widget['endpoint']}",
+        params=params,
+        timeout=5,
+    )
+    resp.raise_for_status()
+    _sleep(mod.get('duration', widget['default_duration']), stop_event)
+
+
 def _display_news(cfg, pixelcade_url, stop_event):
     mod = cfg.get('news', {})
     raw = mod.get('rss_feeds', [])
@@ -232,10 +316,18 @@ def display_module(module, cfg, date, stop_event):
     with status_lock:
         status['current_module'] = module
 
+    with status_lock:
+        was_healthy = status.get('pixelcade_healthy', False)
+
     try:
         check_pixelcade_health(pixelcade_url, timeout)
+        startup_grace_period = cfg.get('pixelcade', {}).get('startup_grace_period', 15)
         with status_lock:
             status['pixelcade_healthy'] = True
+        if not was_healthy and startup_grace_period:
+            logging.info(f"Waiting {startup_grace_period}s for Pixelcade hardware to settle after reconnect")
+            if _sleep(startup_grace_period, stop_event):
+                return
     except (requests.RequestException, tenacity.RetryError) as e:
         logging.warning(f"Skipping {module}: Pixelcade offline ({e})")
         with status_lock:
@@ -251,6 +343,8 @@ def display_module(module, cfg, date, stop_event):
             _display_sports(cfg, pixelcade_url, date, stop_event)
         elif module in _MODULE_HANDLERS:
             _MODULE_HANDLERS[module](cfg, pixelcade_url, stop_event)
+        elif module in PIXELCADE_WIDGET_MODULES:
+            _display_pixelcade_widget(module, cfg, pixelcade_url, stop_event)
         else:
             logging.warning(f"Unknown module: {module}")
     except requests.RequestException as e:
@@ -268,6 +362,7 @@ def main_loop(stop_event):
     pixelcade_url = cfg['pixelcade']['url'].rstrip('/')
     timeout = cfg['pixelcade'].get('health_check_timeout', 10)
     interval = cfg['pixelcade'].get('health_check_interval', 30)
+    startup_grace_period = cfg['pixelcade'].get('startup_grace_period', 15)
 
     # Wait for Pixelcade to come up
     while not stop_event.is_set():
@@ -286,18 +381,29 @@ def main_loop(stop_event):
     if stop_event.is_set():
         return
 
-    # Startup banner
+    if startup_grace_period:
+        logging.info(f"Waiting {startup_grace_period}s for Pixelcade hardware to settle")
+        if _sleep(startup_grace_period, stop_event):
+            return
+
     try:
-        banner = cfg.get('startup', {}).get('banner', 'SportsLooper')
-        resp = requests.get(
-            f"{pixelcade_url}/text",
-            params={'t': banner, 'l': '10', 'ledonly': 'true'},
-            timeout=5,
-        )
-        resp.raise_for_status()
-        _sleep(10, stop_event)
-    except Exception as e:
-        logging.warning(f"Startup banner failed: {e}")
+        check_pixelcade_health(pixelcade_url, timeout)
+    except (requests.RequestException, tenacity.RetryError) as e:
+        logging.warning(f"Startup banner skipped: Pixelcade offline ({e})")
+        with status_lock:
+            status['pixelcade_healthy'] = False
+    else:
+        try:
+            banner = cfg.get('startup', {}).get('banner', 'SportsLooper')
+            resp = requests.get(
+                f"{pixelcade_url}/text",
+                params={'t': banner, 'l': '10', 'ledonly': 'true'},
+                timeout=5,
+            )
+            resp.raise_for_status()
+            _sleep(10, stop_event)
+        except Exception as e:
+            logging.warning(f"Startup banner failed: {e}")
 
     current_date = None
     while not stop_event.is_set():

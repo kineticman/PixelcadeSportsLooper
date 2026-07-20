@@ -6,6 +6,7 @@ service_error.log
 
 # Local Pixelcade listener runtime
 pixelcade.ini
+pixelcade.ini.backup.*
 pixelcade-runtime/
 
 # Python cache
