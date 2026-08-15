@@ -19,9 +19,13 @@ status = {
     'pixelcade_healthy': False,
     'last_cache_refresh': None,
     'running': False,
+    'pixelcade_recovery_hold_until': 0,
+    'pixelcade_recovery_hold_reason': None,
 }
 status_lock = threading.Lock()
 config_lock = threading.Lock()
+pixelcade_display_lock = threading.Lock()
+last_pixelcade_display_request_at = 0.0
 
 SUPPORTED_LEAGUES = {
     'nfl':                      'football/nfl',
@@ -105,6 +109,15 @@ def _serial_device_present():
     return False
 
 
+
+def _recovery_hold_remaining():
+    with status_lock:
+        hold_until = float(status.get('pixelcade_recovery_hold_until') or 0)
+        reason = status.get('pixelcade_recovery_hold_reason') or 'manual recovery'
+    remaining = int(max(0, hold_until - time.time()))
+    return remaining, reason
+
+
 def check_pixelcade_health(pixelcade_url, timeout):
     """Returns True if healthy, raises tenacity.RetryError / RequestException if not."""
     _pixelcade_health_request(pixelcade_url, timeout)
@@ -118,6 +131,35 @@ def _sleep(seconds, stop_event):
             return True
         time.sleep(1)
     return False
+
+
+
+def _pixelcade_request_cooldown(cfg):
+    return max(0.0, min(float(cfg.get('pixelcade', {}).get('request_cooldown_seconds', 2)), 30.0))
+
+
+def _minimum_display_seconds(cfg):
+    return max(0, min(int(cfg.get('pixelcade', {}).get('minimum_display_seconds', 12)), 120))
+
+
+def _pixelcade_display_get(cfg, url, params=None, timeout=5, stop_event=None):
+    global last_pixelcade_display_request_at
+    cooldown = _pixelcade_request_cooldown(cfg)
+
+    with pixelcade_display_lock:
+        elapsed = time.monotonic() - last_pixelcade_display_request_at
+        wait_seconds = cooldown - elapsed
+        if wait_seconds > 0:
+            logging.info(f"Waiting {wait_seconds:.1f}s before next Pixelcade display request")
+            if stop_event and _sleep(wait_seconds, stop_event):
+                raise requests.RequestException('Stop requested during Pixelcade display cooldown')
+
+        try:
+            resp = requests.get(url, params=params, timeout=timeout)
+            resp.raise_for_status()
+            return resp
+        finally:
+            last_pixelcade_display_request_at = time.monotonic()
 
 
 def _fetch_espn_games(league, date):
@@ -150,9 +192,8 @@ def _display_weather(cfg, pixelcade_url, stop_event):
     if not zip_code:
         logging.warning("Weather module: zip_code not configured")
         return
-    resp = requests.get(f"{pixelcade_url}/weather", params={'location': zip_code, 'ledonly': 'true'}, timeout=5)
-    resp.raise_for_status()
-    _sleep(mod.get('duration', 13), stop_event)
+    _pixelcade_display_get(cfg, f"{pixelcade_url}/weather", params={'location': zip_code, 'ledonly': 'true'}, timeout=5, stop_event=stop_event)
+    _sleep(max(mod.get('duration', 13), _minimum_display_seconds(cfg)), stop_event)
 
 
 def _display_clock(cfg, pixelcade_url, stop_event):
@@ -182,13 +223,14 @@ def _display_clock(cfg, pixelcade_url, stop_event):
     if isinstance(extra_params, dict):
         params.update({k: v for k, v in extra_params.items() if v not in (None, '')})
 
-    resp = requests.get(
+    _pixelcade_display_get(
+        cfg,
         f"{pixelcade_url}/clock",
         params=params,
         timeout=5,
+        stop_event=stop_event,
     )
-    resp.raise_for_status()
-    _sleep(mod.get('duration', 10), stop_event)
+    _sleep(max(mod.get('duration', 10), _minimum_display_seconds(cfg)), stop_event)
 
 
 def _display_sports(cfg, pixelcade_url, date, stop_event):
@@ -225,9 +267,9 @@ def _display_sports(cfg, pixelcade_url, date, stop_event):
             logging.debug(f"No games for {league} on {date}")
             continue
 
-        resp = requests.get(f"{pixelcade_url}/sports/{league}", params=params, timeout=5)
-        resp.raise_for_status()
-        if _sleep(max(len(games), 1) * seconds_per_game, stop_event):
+        _pixelcade_display_get(cfg, f"{pixelcade_url}/sports/{league}", params=params, timeout=5, stop_event=stop_event)
+        display_seconds = max(max(len(games), 1) * seconds_per_game, _minimum_display_seconds(cfg))
+        if _sleep(display_seconds, stop_event):
             return
 
 
@@ -237,13 +279,14 @@ def _display_stocks(cfg, pixelcade_url, stop_event):
     if not tickers:
         logging.warning("Stocks module: no tickers configured")
         return
-    resp = requests.get(
+    _pixelcade_display_get(
+        cfg,
         f"{pixelcade_url}/stocks",
         params={'tickers': tickers, 'c': 'blue', 's': '9', 'ledonly': 'true'},
         timeout=5,
+        stop_event=stop_event,
     )
-    resp.raise_for_status()
-    _sleep(mod.get('duration', 10), stop_event)
+    _sleep(max(mod.get('duration', 10), _minimum_display_seconds(cfg)), stop_event)
 
 
 def _display_pixelcade_widget(module, cfg, pixelcade_url, stop_event):
@@ -256,13 +299,14 @@ def _display_pixelcade_widget(module, cfg, pixelcade_url, stop_event):
     if isinstance(extra_params, dict):
         params.update({k: v for k, v in extra_params.items() if v not in (None, '')})
 
-    resp = requests.get(
+    _pixelcade_display_get(
+        cfg,
         f"{pixelcade_url}/{widget['endpoint']}",
         params=params,
         timeout=5,
+        stop_event=stop_event,
     )
-    resp.raise_for_status()
-    _sleep(mod.get('duration', widget['default_duration']), stop_event)
+    _sleep(max(mod.get('duration', widget['default_duration']), _minimum_display_seconds(cfg)), stop_event)
 
 
 def _display_news(cfg, pixelcade_url, stop_event):
@@ -283,13 +327,14 @@ def _display_news(cfg, pixelcade_url, stop_event):
         if max_runtime and elapsed >= max_runtime:
             break
         try:
-            resp = requests.get(
+            _pixelcade_display_get(
+                cfg,
                 f"{pixelcade_url}/ticker",
                 params={'start': '', 'feed': feed_url, 'c': 'yellow', 's': '8',
                         'newsTickerRefresh': duration_per_feed, 'ledonly': 'true'},
                 timeout=5,
+                stop_event=stop_event,
             )
-            resp.raise_for_status()
         except requests.RequestException as e:
             logging.error(f"News feed error {feed_url}: {e}")
             continue
@@ -316,20 +361,27 @@ def display_module(module, cfg, date, stop_event):
     with status_lock:
         status['current_module'] = module
 
+    hold_remaining, hold_reason = _recovery_hold_remaining()
+    if hold_remaining:
+        with status_lock:
+            status['pixelcade_healthy'] = False
+        logging.info(f"Skipping {module}: Pixelcade recovery hold active for {hold_remaining}s ({hold_reason})")
+        return
+
     with status_lock:
         was_healthy = status.get('pixelcade_healthy', False)
 
     try:
         check_pixelcade_health(pixelcade_url, timeout)
         startup_grace_period = cfg.get('pixelcade', {}).get('startup_grace_period', 15)
-        with status_lock:
-            status['pixelcade_healthy'] = True
         if not was_healthy and startup_grace_period:
             logging.info(f"Waiting {startup_grace_period}s for Pixelcade hardware to settle after reconnect")
             if _sleep(startup_grace_period, stop_event):
                 return
-            logging.info("Pixelcade recovered and ready")
-        elif not was_healthy:
+            check_pixelcade_health(pixelcade_url, timeout)
+        with status_lock:
+            status['pixelcade_healthy'] = True
+        if not was_healthy:
             logging.info("Pixelcade recovered and ready")
     except (requests.RequestException, tenacity.RetryError) as e:
         logging.warning(f"Skipping {module}: Pixelcade offline ({e})")
@@ -399,12 +451,13 @@ def main_loop(stop_event):
     else:
         try:
             banner = cfg.get('startup', {}).get('banner', 'SportsLooper')
-            resp = requests.get(
+            _pixelcade_display_get(
+                cfg,
                 f"{pixelcade_url}/text",
                 params={'t': banner, 'l': '10', 'ledonly': 'true'},
                 timeout=5,
+                stop_event=stop_event,
             )
-            resp.raise_for_status()
             _sleep(10, stop_event)
         except Exception as e:
             logging.warning(f"Startup banner failed: {e}")

@@ -335,6 +335,16 @@
                   <input type="number" class="form-control" id="healthTimeout" min="1" max="60">
                 </div>
               </div>
+              <div class="row g-2 mt-2">
+                <div class="col">
+                  <label class="form-label">Display request cooldown (s)</label>
+                  <input type="number" class="form-control" id="requestCooldown" min="0" max="30" step="0.5">
+                </div>
+                <div class="col">
+                  <label class="form-label">Minimum display time (s)</label>
+                  <input type="number" class="form-control" id="minimumDisplaySeconds" min="0" max="120">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -363,6 +373,41 @@
               </div>
               <div class="form-text">Examples: <code>/plex</code>, <code>/f1</code>, <code>/dayinretro</code>, <code>/arcade/stream/mame/pacman</code></div>
               <pre id="manualCommandResult" class="bg-light border rounded p-2 mt-2 small" style="display:none; max-height:180px; overflow:auto"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-usb-symbol me-1"></i>USB Recovery</div>
+            <div class="card-body">
+              <div class="row g-2 align-items-end mb-2">
+                <div class="col-sm-4">
+                  <label class="form-label small">Looper pause</label>
+                  <select class="form-select form-select-sm" id="recoveryHoldSeconds">
+                    <option value="60">60 seconds</option>
+                    <option value="90" selected>90 seconds</option>
+                    <option value="120">120 seconds</option>
+                    <option value="180">180 seconds</option>
+                  </select>
+                </div>
+                <div class="col-sm-8 d-flex flex-wrap gap-2">
+                  <button class="btn btn-outline-secondary" id="recoveryStatusBtn" onclick="loadRecoveryStatus()">
+                    <i class="bi bi-search me-1"></i>Detect Device
+                  </button>
+                  <button class="btn btn-warning" id="authorizeResetBtn" onclick="runRecoveryAction('authorize-reset')">
+                    <i class="bi bi-arrow-repeat me-1"></i>USB Reconnect
+                  </button>
+                  <button class="btn btn-outline-danger" id="driverResetBtn" onclick="runRecoveryAction('driver-reset')">
+                    <i class="bi bi-radioactive me-1"></i>Driver Reset
+                  </button>
+                  <button class="btn btn-danger" id="rootResetBtn" onclick="runRecoveryAction('root-reset')">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Root Reset
+                  </button>
+                </div>
+              </div>
+              <div class="form-text mb-2">Use USB Reconnect first. Root Reset is strongest and resets the configured USB root hub.</div>
+              <pre id="recoveryResult" class="bg-light border rounded p-2 small mb-0" style="max-height:220px; overflow:auto">Not checked yet.</pre>
             </div>
           </div>
         </div>
@@ -470,6 +515,8 @@ function populateAll() {
   document.getElementById('pixelcadeUrl').value    = cfg.pixelcade?.url ?? 'http://localhost:6992';
   document.getElementById('healthInterval').value  = cfg.pixelcade?.health_check_interval ?? 30;
   document.getElementById('healthTimeout').value   = cfg.pixelcade?.health_check_timeout ?? 10;
+  document.getElementById('requestCooldown').value  = cfg.pixelcade?.request_cooldown_seconds ?? 2;
+  document.getElementById('minimumDisplaySeconds').value = cfg.pixelcade?.minimum_display_seconds ?? 12;
   document.getElementById('startupBanner').value   = cfg.startup?.banner ?? '';
 
   // Weather
@@ -685,6 +732,8 @@ function buildConfig() {
       url: document.getElementById('pixelcadeUrl').value.trim(),
       health_check_interval: parseInt(document.getElementById('healthInterval').value) || 30,
       health_check_timeout:  parseInt(document.getElementById('healthTimeout').value)  || 10,
+      request_cooldown_seconds: parseFloat(document.getElementById('requestCooldown').value) || 0,
+      minimum_display_seconds: parseInt(document.getElementById('minimumDisplaySeconds').value) || 0,
     },
     startup: {
       banner: document.getElementById('startupBanner').value.trim(),
@@ -787,6 +836,83 @@ async function sendManualCommand() {
   }
 }
 
+
+function setRecoveryButtons(disabled) {
+  ['recoveryStatusBtn', 'authorizeResetBtn', 'driverResetBtn', 'rootResetBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = disabled;
+  });
+}
+
+function formatRecoveryStatus(data) {
+  const lines = [
+    `host sysfs: ${data.host_sys_available ? 'available' : 'missing'}`,
+    `host dev: ${data.host_dev_available ? 'available' : 'missing'}`,
+  ];
+  if (data.usb_root) {
+    lines.push(`usb root: ${data.usb_root} (${data.usb_root_available ? 'available' : 'missing'})`);
+  }
+  if (data.recovery_hold_remaining) {
+    lines.push(`recovery hold: ${data.recovery_hold_remaining}s (${data.recovery_hold_reason || 'manual recovery'})`);
+  }
+  if (!data.devices?.length) {
+    lines.push('device: not detected');
+    return lines.join('\n');
+  }
+  data.devices.forEach((dev, index) => {
+    lines.push(`device ${index + 1}: ${dev.product_name || 'Pixelcade/BitPixel'}`);
+    lines.push(`  tty: ${dev.tty}`);
+    lines.push(`  usb id: ${dev.usb_id}`);
+    lines.push(`  sysfs: ${dev.sysfs_name}`);
+    if (dev.manufacturer) lines.push(`  manufacturer: ${dev.manufacturer}`);
+  });
+  return lines.join('\n');
+}
+
+async function loadRecoveryStatus() {
+  const result = document.getElementById('recoveryResult');
+  setRecoveryButtons(true);
+  result.textContent = 'Checking USB device...';
+  try {
+    const res = await fetch('/api/pixelcade-recovery/status');
+    const data = await res.json();
+    result.textContent = data.ok ? formatRecoveryStatus(data) : `Error: ${data.error}`;
+  } catch (e) {
+    result.textContent = `Request failed: ${e}`;
+  } finally {
+    setRecoveryButtons(false);
+  }
+}
+
+async function runRecoveryAction(action) {
+  const result = document.getElementById('recoveryResult');
+  const holdSeconds = parseInt(document.getElementById('recoveryHoldSeconds')?.value) || 90;
+  setRecoveryButtons(true);
+  result.textContent = `${action} running...`;
+  try {
+    const res = await fetch('/api/pixelcade-recovery', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action, hold_seconds: holdSeconds}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      result.textContent = `${data.message}\n\n${formatRecoveryStatus({host_sys_available: true, host_dev_available: true, devices: [data.device]})}`;
+      showToast('USB recovery command completed.', 'warning');
+      setTimeout(loadRecoveryStatus, 5000);
+    } else {
+      result.textContent = `Error: ${data.error}`;
+      showToast(`Recovery failed: ${data.error}`, 'danger');
+    }
+  } catch (e) {
+    result.textContent = `Request failed: ${e}`;
+    showToast(`Recovery failed: ${e}`, 'danger');
+  } finally {
+    setRecoveryButtons(false);
+  }
+}
+
+
 // ── Save ──
 document.getElementById('saveBtn').addEventListener('click', async () => {
   const btn = document.getElementById('saveBtn');
@@ -838,6 +964,7 @@ async function pollStatus() {
 }
 
 loadConfig();
+loadRecoveryStatus();
 pollStatus();
 setInterval(pollStatus, 5000);
 </script>

@@ -57,12 +57,15 @@ services:
 
   sportslooper:
     build: .
+    privileged: true
     network_mode: host
     restart: unless-stopped
     environment:
       TZ: America/New_York
+      PIXELCADE_USB_ROOT: usb1
     volumes:
       - ./app/config.json:/app/config.json
       - /dev:/host-dev:ro
+      - /sys:/host-sys
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
