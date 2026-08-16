@@ -84,6 +84,32 @@ def _write_text(path, value):
         f.write(value)
 
 
+def _usb_root_from_sysfs_name(sysfs_name):
+    bus = (sysfs_name or '').split('-', 1)[0]
+    return f'usb{bus}' if bus.isdigit() else ''
+
+
+def _available_usb_roots():
+    roots = []
+    pattern = os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', 'usb*')
+    for root_path in glob.glob(pattern):
+        name = os.path.basename(root_path)
+        if name.startswith('usb') and name[3:].isdigit():
+            roots.append(name)
+    return sorted(set(roots), key=lambda name: int(name[3:]))
+
+
+def _configured_usb_root():
+    configured = ''
+    try:
+        with _config_lock:
+            with open(CONFIG_PATH) as f:
+                configured = json.load(f).get('pixelcade', {}).get('usb_root', '')
+    except Exception:
+        logging.exception("Unable to read configured Pixelcade USB root")
+    return (configured or PIXELCADE_USB_ROOT or '').strip()
+
+
 def _discover_pixelcade_usb_devices():
     devices = []
     sys_root = os.path.realpath(HOST_SYS_PATH)
@@ -110,6 +136,7 @@ def _discover_pixelcade_usb_devices():
                             'dev_path': os.path.join(HOST_DEV_PATH, tty),
                             'usb_id': f'{vendor}:{product}',
                             'sysfs_name': os.path.basename(path),
+                            'usb_root': _usb_root_from_sysfs_name(os.path.basename(path)),
                             'authorized_path': os.path.join(path, 'authorized'),
                             'manufacturer': _read_text(os.path.join(path, 'manufacturer')) if os.path.exists(os.path.join(path, 'manufacturer')) else '',
                             'product_name': _read_text(os.path.join(path, 'product')) if os.path.exists(os.path.join(path, 'product')) else '',
@@ -148,11 +175,11 @@ def _find_driver_bound_parent(path):
 
 
 def _run_root_reset():
-    root_name = PIXELCADE_USB_ROOT.strip()
+    root_name = _configured_usb_root()
     if not root_name:
-        raise RuntimeError('PIXELCADE_USB_ROOT is not configured')
+        raise RuntimeError('Pixelcade USB root is not configured')
     if '/' in root_name or root_name in ('.', '..'):
-        raise RuntimeError('Invalid PIXELCADE_USB_ROOT value')
+        raise RuntimeError('Invalid Pixelcade USB root value')
 
     root_path = os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', root_name)
     if not os.path.exists(root_path):
@@ -207,13 +234,18 @@ def pixelcade_recovery_status():
     with _status_lock:
         hold_until = float(_status.get('pixelcade_recovery_hold_until') or 0)
         hold_reason = _status.get('pixelcade_recovery_hold_reason')
+    devices = _discover_pixelcade_usb_devices()
+    usb_root = _configured_usb_root()
+    detected_usb_root = next((dev.get('usb_root') for dev in devices if dev.get('usb_root')), '')
     return jsonify({
         'ok': True,
         'host_sys_available': os.path.isdir(HOST_SYS_PATH),
         'host_dev_available': os.path.isdir(HOST_DEV_PATH),
-        'devices': _discover_pixelcade_usb_devices(),
-        'usb_root': PIXELCADE_USB_ROOT,
-        'usb_root_available': bool(PIXELCADE_USB_ROOT and os.path.exists(os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', PIXELCADE_USB_ROOT))),
+        'devices': devices,
+        'usb_root': usb_root,
+        'detected_usb_root': detected_usb_root,
+        'available_usb_roots': _available_usb_roots(),
+        'usb_root_available': bool(usb_root and os.path.exists(os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', usb_root))),
         'recovery_hold_remaining': int(max(0, hold_until - time.time())),
         'recovery_hold_reason': hold_reason,
         'default_recovery_hold_seconds': DEFAULT_RECOVERY_HOLD_SECONDS,

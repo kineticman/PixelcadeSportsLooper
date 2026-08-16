@@ -5,7 +5,8 @@
     "health_check_timeout": 10,
     "startup_grace_period": 15,
     "request_cooldown_seconds": 2,
-    "minimum_display_seconds": 12
+    "minimum_display_seconds": 12,
+    "usb_root": "usb8"
   },
   "startup": {
     "banner": "Brad's Bar and Arcade"

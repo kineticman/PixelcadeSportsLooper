@@ -391,7 +391,13 @@
                     <option value="180">180 seconds</option>
                   </select>
                 </div>
-                <div class="col-sm-8 d-flex flex-wrap gap-2">
+                <div class="col-sm-4">
+                  <label class="form-label small">Root reset bus</label>
+                  <select class="form-select form-select-sm" id="usbRoot">
+                    <option value="">Detecting...</option>
+                  </select>
+                </div>
+                <div class="col-sm-4 d-flex flex-wrap gap-2">
                   <button class="btn btn-outline-secondary" id="recoveryStatusBtn" onclick="loadRecoveryStatus()">
                     <i class="bi bi-search me-1"></i>Detect Device
                   </button>
@@ -517,6 +523,7 @@ function populateAll() {
   document.getElementById('healthTimeout').value   = cfg.pixelcade?.health_check_timeout ?? 10;
   document.getElementById('requestCooldown').value  = cfg.pixelcade?.request_cooldown_seconds ?? 2;
   document.getElementById('minimumDisplaySeconds').value = cfg.pixelcade?.minimum_display_seconds ?? 12;
+  renderUsbRootOptions({available_usb_roots: [], usb_root: cfg.pixelcade?.usb_root ?? '', detected_usb_root: ''});
   document.getElementById('startupBanner').value   = cfg.startup?.banner ?? '';
 
   // Weather
@@ -732,8 +739,10 @@ function buildConfig() {
       url: document.getElementById('pixelcadeUrl').value.trim(),
       health_check_interval: parseInt(document.getElementById('healthInterval').value) || 30,
       health_check_timeout:  parseInt(document.getElementById('healthTimeout').value)  || 10,
+      startup_grace_period: cfg.pixelcade?.startup_grace_period ?? 15,
       request_cooldown_seconds: parseFloat(document.getElementById('requestCooldown').value) || 0,
       minimum_display_seconds: parseInt(document.getElementById('minimumDisplaySeconds').value) || 0,
+      usb_root: document.getElementById('usbRoot')?.value || cfg.pixelcade?.usb_root || '',
     },
     startup: {
       banner: document.getElementById('startupBanner').value.trim(),
@@ -837,6 +846,35 @@ async function sendManualCommand() {
 }
 
 
+
+function renderUsbRootOptions(data) {
+  const select = document.getElementById('usbRoot');
+  if (!select) return;
+  const previous = select.value;
+  const configured = cfg.pixelcade?.usb_root || data.usb_root || '';
+  const detected = data.detected_usb_root || '';
+  const selected = previous || configured || detected;
+  const roots = new Set(data.available_usb_roots || []);
+  if (configured) roots.add(configured);
+  if (detected) roots.add(detected);
+
+  const ordered = [...roots].sort((a, b) => {
+    const ai = parseInt(String(a).replace('usb', ''), 10);
+    const bi = parseInt(String(b).replace('usb', ''), 10);
+    return (Number.isFinite(ai) ? ai : 999) - (Number.isFinite(bi) ? bi : 999);
+  });
+
+  select.innerHTML = ordered.length
+    ? ordered.map(root => {
+        const markers = [];
+        if (root === detected) markers.push('detected BitPixel');
+        if (root === configured) markers.push('configured');
+        const label = markers.length ? `${root} (${markers.join(', ')})` : root;
+        return `<option value="${root}" ${root === selected ? 'selected' : ''}>${label}</option>`;
+      }).join('')
+    : '<option value="">No USB roots found</option>';
+}
+
 function setRecoveryButtons(disabled) {
   ['recoveryStatusBtn', 'authorizeResetBtn', 'driverResetBtn', 'rootResetBtn'].forEach(id => {
     const btn = document.getElementById(id);
@@ -850,7 +888,10 @@ function formatRecoveryStatus(data) {
     `host dev: ${data.host_dev_available ? 'available' : 'missing'}`,
   ];
   if (data.usb_root) {
-    lines.push(`usb root: ${data.usb_root} (${data.usb_root_available ? 'available' : 'missing'})`);
+    lines.push(`configured root: ${data.usb_root} (${data.usb_root_available ? 'available' : 'missing'})`);
+  }
+  if (data.detected_usb_root) {
+    lines.push(`detected root: ${data.detected_usb_root}`);
   }
   if (data.recovery_hold_remaining) {
     lines.push(`recovery hold: ${data.recovery_hold_remaining}s (${data.recovery_hold_reason || 'manual recovery'})`);
@@ -864,6 +905,7 @@ function formatRecoveryStatus(data) {
     lines.push(`  tty: ${dev.tty}`);
     lines.push(`  usb id: ${dev.usb_id}`);
     lines.push(`  sysfs: ${dev.sysfs_name}`);
+    if (dev.usb_root) lines.push(`  root: ${dev.usb_root}`);
     if (dev.manufacturer) lines.push(`  manufacturer: ${dev.manufacturer}`);
   });
   return lines.join('\n');
@@ -876,6 +918,7 @@ async function loadRecoveryStatus() {
   try {
     const res = await fetch('/api/pixelcade-recovery/status');
     const data = await res.json();
+    if (data.ok) renderUsbRootOptions(data);
     result.textContent = data.ok ? formatRecoveryStatus(data) : `Error: ${data.error}`;
   } catch (e) {
     result.textContent = `Request failed: ${e}`;
