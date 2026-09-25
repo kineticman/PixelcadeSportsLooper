@@ -6,7 +6,7 @@
     "startup_grace_period": 15,
     "request_cooldown_seconds": 2,
     "minimum_display_seconds": 12,
-    "usb_root": "usb8"
+    "usb_root": "usb3"
   },
   "startup": {
     "banner": "Brad's Bar and Arcade"
@@ -27,7 +27,7 @@
   "clock": {
     "enabled": true,
     "duration": 10,
-    "type": "frogger",
+    "type": "retro",
     "color": "green",
     "twelve_hour": true,
     "show_seconds": true,
@@ -65,31 +65,31 @@
         "teams": ""
       },
       "esp.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "ger.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "ita.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "fra.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "por.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "ned.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "mex.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "usa.1": {
@@ -97,7 +97,7 @@
         "teams": ""
       },
       "uefa.champions": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "college-football": {
