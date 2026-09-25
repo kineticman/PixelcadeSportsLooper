@@ -412,7 +412,7 @@
                   </button>
                 </div>
               </div>
-              <div class="form-text mb-2">Use USB Reconnect first. Root Reset is strongest and resets the configured USB root hub.</div>
+              <div class="form-text mb-2">Use USB Reconnect first. Root Reset is strongest: it resets the root hub of the detected device and falls back to the configured bus when no device is present.</div>
               <pre id="recoveryResult" class="bg-light border rounded p-2 small mb-0" style="max-height:220px; overflow:auto">Not checked yet.</pre>
             </div>
           </div>
@@ -892,6 +892,10 @@ function formatRecoveryStatus(data) {
   }
   if (data.detected_usb_root) {
     lines.push(`detected root: ${data.detected_usb_root}`);
+  }
+  if (data.effective_usb_root) {
+    const source = data.usb_root_source || 'configured';
+    lines.push(`root reset target: ${data.effective_usb_root} (${source}${data.effective_usb_root_available ? '' : ', missing'})`);
   }
   if (data.recovery_hold_remaining) {
     lines.push(`recovery hold: ${data.recovery_hold_remaining}s (${data.recovery_hold_reason || 'manual recovery'})`);

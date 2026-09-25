@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+### Changed
+- **Pixelcade USB root auto-detection**: recovery root resets now target the USB root hub the detected device is attached to, falling back to the configured `pixelcade.usb_root` only when no device is present, so recovery survives moving the marquee to a different port.
+
+---
+
 ## [1.3] - 2025-08-17
 ### Fixed
 - **ESPN date rollover**: now recalculates the YYYYMMDD date each loop and logs changes, preventing stale schedules past midnight.

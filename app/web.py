@@ -160,6 +160,21 @@ def _get_recovery_device():
 
 
 
+def _resolve_usb_root():
+    """Return (root_name, source) for the root hub the recovery reset should target.
+
+    Prefers the root hub the detected Pixelcade device is currently attached to, so
+    the reset follows the cable when it moves between USB ports, and falls back to
+    the configured value only when no device is present.
+    """
+    for device in _discover_pixelcade_usb_devices():
+        detected = (device.get('usb_root') or '').strip()
+        if detected:
+            return detected, 'detected'
+    configured = _configured_usb_root()
+    return (configured, 'configured') if configured else ('', '')
+
+
 def _find_driver_bound_parent(path):
     sys_root = os.path.realpath(HOST_SYS_PATH)
     current = os.path.realpath(path)
@@ -175,15 +190,15 @@ def _find_driver_bound_parent(path):
 
 
 def _run_root_reset():
-    root_name = _configured_usb_root()
+    root_name, root_source = _resolve_usb_root()
     if not root_name:
-        raise RuntimeError('Pixelcade USB root is not configured')
+        raise RuntimeError('No Pixelcade USB device detected and no USB root is configured')
     if '/' in root_name or root_name in ('.', '..'):
         raise RuntimeError('Invalid Pixelcade USB root value')
 
     root_path = os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', root_name)
     if not os.path.exists(root_path):
-        raise RuntimeError(f'USB root {root_name} is not available')
+        raise RuntimeError(f'USB root {root_name} ({root_source or "unknown"}) is not available')
 
     device_path, driver_path = _find_driver_bound_parent(root_path)
     device_name = os.path.basename(device_path)
@@ -201,6 +216,8 @@ def _run_root_reset():
         'serial': '',
         'driver_device': device_name,
         'driver_path': driver_path,
+        'usb_root': root_name,
+        'usb_root_source': root_source,
     }
 
 
@@ -237,6 +254,7 @@ def pixelcade_recovery_status():
     devices = _discover_pixelcade_usb_devices()
     usb_root = _configured_usb_root()
     detected_usb_root = next((dev.get('usb_root') for dev in devices if dev.get('usb_root')), '')
+    effective_usb_root, usb_root_source = _resolve_usb_root()
     return jsonify({
         'ok': True,
         'host_sys_available': os.path.isdir(HOST_SYS_PATH),
@@ -244,8 +262,14 @@ def pixelcade_recovery_status():
         'devices': devices,
         'usb_root': usb_root,
         'detected_usb_root': detected_usb_root,
+        'effective_usb_root': effective_usb_root,
+        'usb_root_source': usb_root_source,
         'available_usb_roots': _available_usb_roots(),
         'usb_root_available': bool(usb_root and os.path.exists(os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', usb_root))),
+        'effective_usb_root_available': bool(
+            effective_usb_root
+            and os.path.exists(os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', effective_usb_root))
+        ),
         'recovery_hold_remaining': int(max(0, hold_until - time.time())),
         'recovery_hold_reason': hold_reason,
         'default_recovery_hold_seconds': DEFAULT_RECOVERY_HOLD_SECONDS,
