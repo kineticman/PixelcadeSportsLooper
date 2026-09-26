@@ -120,6 +120,7 @@ After editing, restart the service.
 - **Service Fails to Start**: Check Event Viewer (Windows) or `journalctl` (Pi).
 - **No Logs**: Confirm file permissions.
 - **Pixelcade Offline**: Retries every 30 seconds and logs to `fallback.log`.
+- **Pixelcade log growing large**: `pixelcade-runtime/pixelweb-debug.log` grows ~20-50 MB/day with debug logging on. Install `deploy/logrotate-pixelcade.conf` to `/etc/logrotate.d/pixelcade` to cap it at 100 MB with three compressed rotations.
 
 ## License
 MIT License. See LICENSE for details.

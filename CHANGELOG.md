@@ -6,6 +6,10 @@
 
 ### Fixed
 - **Blank marquee during sports tickers**: the looper now confirms pixelweb actually drew each sports ticker before waiting out that league's display window, and moves on after repeated failures instead of leaving the panel dark for a full minute when a scoreboard fetch fails. Configurable from the Pixelcade tab in the admin UI, or via `pixelcade.confirm_output_seconds` (`0` disables).
+- **Weather widget never appearing**: pixelweb's primary weather source fails slowly before falling back to Open-Meteo, which pushed its response past the looper's 5s timeout every cycle. The weather request now allows 20s, so the fallback finishes and the widget keeps its full display window.
+
+### Added
+- **Log rotation for the Pixelcade listener**: `deploy/logrotate-pixelcade.conf` caps `pixelweb-debug.log` at 100 MB with three compressed rotations, since the file otherwise grows unbounded.
 
 ---
 

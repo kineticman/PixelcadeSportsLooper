@@ -20,6 +20,9 @@ PIXELWEB_LOG_PATH = os.environ.get('PIXELWEB_LOG_PATH', '/pixelcade/pixelweb-deb
 PIXELWEB_FRAME_MARKERS = (b'[CGO] Image data has', b'Sending Image Bytes', b'Starting new stream')
 DEFAULT_CONFIRM_OUTPUT_SECONDS = 10.0
 MAX_SPORTS_RENDER_FAILURES = 3
+# pixelweb's primary weather source fails slowly before falling back to Open-Meteo
+# (measured 0-17s), so the weather request needs a longer budget than the usual 5s.
+WEATHER_REQUEST_TIMEOUT = 20
 _pixelweb_log_offset = None
 
 # Shared state read by web.py for the status endpoint
@@ -266,7 +269,13 @@ def _display_weather(cfg, pixelcade_url, stop_event):
     if not zip_code:
         logging.warning("Weather module: zip_code not configured")
         return
-    _pixelcade_display_get(cfg, f"{pixelcade_url}/weather", params={'location': zip_code, 'ledonly': 'true'}, timeout=5, stop_event=stop_event)
+    _pixelcade_display_get(
+        cfg,
+        f"{pixelcade_url}/weather",
+        params={'location': zip_code, 'ledonly': 'true'},
+        timeout=WEATHER_REQUEST_TIMEOUT,
+        stop_event=stop_event,
+    )
     _sleep(max(mod.get('duration', 13), _minimum_display_seconds(cfg)), stop_event)
 
 
