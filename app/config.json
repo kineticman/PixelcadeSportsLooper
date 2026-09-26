@@ -7,6 +7,9 @@
     "request_cooldown_seconds": 2,
     "minimum_display_seconds": 12,
     "confirm_output_seconds": 10,
+    "auto_recovery": true,
+    "auto_recovery_after_seconds": 120,
+    "auto_recovery_interval_seconds": 300,
     "usb_root": "usb3"
   },
   "startup": {
@@ -158,11 +161,11 @@
     "duration": 60
   },
   "netflix": {
-    "enabled": true,
+    "enabled": false,
     "duration": 10
   },
   "worldclock": {
-    "enabled": true,
+    "enabled": false,
     "duration": 10
   },
   "commute": {
@@ -178,7 +181,7 @@
     "duration": 5
   },
   "whattowatch": {
-    "enabled": true,
+    "enabled": false,
     "duration": 60
   },
   "mediaserver": {
@@ -186,7 +189,7 @@
     "duration": 300
   },
   "trivia": {
-    "enabled": true,
+    "enabled": false,
     "duration": 30
   },
   "twitch": {
@@ -198,7 +201,7 @@
     "duration": 30
   },
   "dayinretro": {
-    "enabled": true,
+    "enabled": false,
     "duration": 30
   },
   "retroachievements": {
@@ -206,11 +209,11 @@
     "duration": 30
   },
   "earthquake": {
-    "enabled": true,
+    "enabled": false,
     "duration": 30
   },
   "f1": {
-    "enabled": true,
+    "enabled": false,
     "duration": 30
   },
   "flighttracker": {
