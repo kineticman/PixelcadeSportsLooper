@@ -269,13 +269,23 @@ def _display_weather(cfg, pixelcade_url, stop_event):
     if not zip_code:
         logging.warning("Weather module: zip_code not configured")
         return
-    _pixelcade_display_get(
-        cfg,
-        f"{pixelcade_url}/weather",
-        params={'location': zip_code, 'ledonly': 'true'},
-        timeout=WEATHER_REQUEST_TIMEOUT,
-        stop_event=stop_event,
-    )
+    try:
+        _pixelcade_display_get(
+            cfg,
+            f"{pixelcade_url}/weather",
+            params={'location': zip_code, 'ledonly': 'true'},
+            timeout=WEATHER_REQUEST_TIMEOUT,
+            stop_event=stop_event,
+        )
+    except requests.exceptions.ReadTimeout:
+        # pixelweb holds the request while it cancels the previous widget, so a slow
+        # reply still means the weather payload was queued. Keep the display window
+        # instead of moving on and cancelling the widget we just asked for.
+        logging.warning(
+            "Weather request not acknowledged within %ss (pixelweb still cancelling the "
+            "previous widget); showing it for the normal window anyway",
+            WEATHER_REQUEST_TIMEOUT,
+        )
     _sleep(max(mod.get('duration', 13), _minimum_display_seconds(cfg)), stop_event)
 
 
