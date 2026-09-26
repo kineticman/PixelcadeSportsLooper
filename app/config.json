@@ -10,7 +10,7 @@
     "auto_recovery": true,
     "auto_recovery_after_seconds": 120,
     "auto_recovery_interval_seconds": 300,
-    "usb_root": "usb1"
+    "usb_root": "usb8"
   },
   "startup": {
     "banner": "Brad's Bar and Arcade"
