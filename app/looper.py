@@ -121,6 +121,11 @@ def _serial_device_present():
     return False
 
 
+def pixelcade_serial_present():
+    """Public presence check used by the auto-recovery watchdog in main.py."""
+    return _serial_device_present()
+
+
 
 def _recovery_hold_remaining():
     with status_lock:

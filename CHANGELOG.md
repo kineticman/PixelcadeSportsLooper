@@ -10,6 +10,7 @@
 
 ### Added
 - **Log rotation for the Pixelcade listener**: `deploy/logrotate-pixelcade.conf` caps `pixelweb-debug.log` at 100 MB with three compressed rotations, since the file otherwise grows unbounded.
+- **Auto-recovery for a missing marquee**: after a failed USB power-on the kernel stops retrying enumeration and the panel stays dark until the cable is reseated. A watchdog thread now power-cycles the port the marquee was last seen on (the software equivalent of replugging it), escalating to a root-hub reset on alternate attempts, with backoff. Toggle and timings are in the Pixelcade tab of the admin UI.
 
 ---
 

@@ -104,6 +104,7 @@ The `sportslooper.ini` file controls behavior.
   - `pixelcade_url`: Pixelcade server URL.
   - `health_check_interval`: Seconds between retry cycles.
   - `confirm_output_seconds`: Seconds to wait for pixelweb to draw a widget before skipping its display window, so a failed data fetch doesn't hold a blank marquee (`0` disables; default `10`). Container runtime settings live in `app/config.json`.
+  - `auto_recovery`: Power-cycle the marquee's USB port when it stops answering USB enumeration, retrying on a backoff (`true` by default). `auto_recovery_after_seconds` (default `120`) is how long the device must be missing first, and `auto_recovery_interval_seconds` (default `300`) is the gap between attempts.
 - **[weather]**:
   - `enabled`: true/false.
   - `zip_code`: ZIP code.

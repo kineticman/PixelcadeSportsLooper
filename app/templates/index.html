@@ -358,6 +358,23 @@
                   <input type="number" class="form-control" id="confirmOutputSeconds" min="1" max="60">
                 </div>
               </div>
+              <div class="row g-2 mt-2 align-items-start">
+                <div class="col">
+                  <div class="form-check form-switch mb-1">
+                    <input class="form-check-input" type="checkbox" id="autoRecoveryEnabled" onchange="syncAutoRecovery()">
+                    <label class="form-check-label" for="autoRecoveryEnabled">Auto-recover missing marquee</label>
+                  </div>
+                  <div class="form-text mb-0">Power-cycle the USB port when the marquee stops answering enumeration</div>
+                </div>
+                <div class="col">
+                  <label class="form-label">Retry after (s)</label>
+                  <input type="number" class="form-control" id="autoRecoveryAfter" min="30" max="3600">
+                </div>
+                <div class="col">
+                  <label class="form-label">Between retries (s)</label>
+                  <input type="number" class="form-control" id="autoRecoveryInterval" min="60" max="3600">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -540,6 +557,10 @@ function populateAll() {
   document.getElementById('confirmOutputEnabled').checked = confirmSeconds > 0;
   document.getElementById('confirmOutputSeconds').value = confirmSeconds > 0 ? confirmSeconds : 10;
   syncConfirmOutput();
+  document.getElementById('autoRecoveryEnabled').checked = cfg.pixelcade?.auto_recovery ?? true;
+  document.getElementById('autoRecoveryAfter').value = cfg.pixelcade?.auto_recovery_after_seconds ?? 120;
+  document.getElementById('autoRecoveryInterval').value = cfg.pixelcade?.auto_recovery_interval_seconds ?? 300;
+  syncAutoRecovery();
   renderUsbRootOptions({available_usb_roots: [], usb_root: cfg.pixelcade?.usb_root ?? '', detected_usb_root: ''});
   document.getElementById('startupBanner').value   = cfg.startup?.banner ?? '';
 
@@ -762,6 +783,9 @@ function buildConfig() {
       confirm_output_seconds: document.getElementById('confirmOutputEnabled')?.checked
         ? (parseInt(document.getElementById('confirmOutputSeconds').value) || 10)
         : 0,
+      auto_recovery: document.getElementById('autoRecoveryEnabled')?.checked ?? true,
+      auto_recovery_after_seconds: parseInt(document.getElementById('autoRecoveryAfter').value) || 120,
+      auto_recovery_interval_seconds: parseInt(document.getElementById('autoRecoveryInterval').value) || 300,
       usb_root: document.getElementById('usbRoot')?.value || cfg.pixelcade?.usb_root || '',
     },
     startup: {
@@ -872,6 +896,15 @@ function syncConfirmOutput() {
   const seconds = document.getElementById('confirmOutputSeconds');
   if (!enabled || !seconds) return;
   seconds.disabled = !enabled.checked;
+}
+
+function syncAutoRecovery() {
+  const enabled = document.getElementById('autoRecoveryEnabled');
+  if (!enabled) return;
+  ['autoRecoveryAfter', 'autoRecoveryInterval'].forEach(id => {
+    const field = document.getElementById(id);
+    if (field) field.disabled = !enabled.checked;
+  });
 }
 
 function renderUsbRootOptions(data) {

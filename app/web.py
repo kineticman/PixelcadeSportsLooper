@@ -149,6 +149,12 @@ def _discover_pixelcade_usb_devices():
                     break
                 path = parent
 
+    if devices and _status is not None and _status_lock is not None:
+        # Remember where the marquee lives so recovery can still target its port
+        # after the device stops answering enumeration and disappears from sysfs.
+        with _status_lock:
+            _status['pixelcade_last_sysfs'] = devices[0]['sysfs_name']
+
     return devices
 
 
@@ -221,6 +227,74 @@ def _run_root_reset():
     }
 
 
+def _device_port_dir(sysfs_name):
+    """Return the sysfs port directory a device is (or was last) plugged into.
+
+    Handles both a device on a hub port ("3-1.2") and one on a root hub port
+    ("1-3"), so recovery can power-cycle the exact port after the device has
+    disappeared and can no longer be discovered.
+    """
+    name = (sysfs_name or '').strip()
+    if not name:
+        return ''
+
+    if '.' in name:
+        parent, _, port = name.rpartition('.')
+        patterns = [
+            os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', f'{parent}:*', f'{parent}-port{port}'),
+        ]
+    else:
+        bus, _, port = name.partition('-')
+        if not bus.isdigit() or not port:
+            return ''
+        patterns = [
+            os.path.join(HOST_SYS_PATH, 'bus', 'usb', 'devices', f'usb{bus}', f'{bus}-0:1.0', f'usb{bus}-port{port}'),
+        ]
+
+    for pattern in patterns:
+        for candidate in sorted(glob.glob(pattern)):
+            if os.path.exists(os.path.join(candidate, 'disable')):
+                return candidate
+    return ''
+
+
+def _run_port_reset():
+    """Power-cycle the USB port the marquee was last seen on.
+
+    This is the software equivalent of unplugging the cable at the port: it forces
+    the kernel to re-run enumeration instead of leaving the device stuck at
+    "unable to enumerate USB device" until someone intervenes.
+    """
+    sysfs_name = ''
+    devices = _discover_pixelcade_usb_devices()
+    if devices:
+        sysfs_name = devices[0].get('sysfs_name', '')
+    if not sysfs_name and _status is not None:
+        with _status_lock:
+            sysfs_name = _status.get('pixelcade_last_sysfs') or ''
+
+    port_dir = _device_port_dir(sysfs_name)
+    if not port_dir:
+        raise RuntimeError('No known Pixelcade USB port to power-cycle')
+
+    disable_path = os.path.join(port_dir, 'disable')
+    _write_text(disable_path, '1')
+    time.sleep(3)
+    _write_text(disable_path, '0')
+    return {
+        'tty': '',
+        'dev_path': '',
+        'usb_id': 'usb-port',
+        'sysfs_name': os.path.basename(port_dir),
+        'authorized_path': '',
+        'manufacturer': '',
+        'product_name': f'USB port {os.path.basename(port_dir)}',
+        'serial': '',
+        'port_path': port_dir,
+        'port_device': sysfs_name,
+    }
+
+
 def _run_authorize_reset():
     device = _get_recovery_device()
     authorized_path = device['authorized_path']
@@ -276,6 +350,30 @@ def pixelcade_recovery_status():
     })
 
 
+def run_auto_recovery(action):
+    """Run a recovery action from the auto-recovery watchdog in main.py.
+
+    Returns (device, hold_seconds). Raises if another recovery is already running,
+    so the watchdog never stacks resets on top of a manual one.
+    """
+    actions = {
+        'port-reset': _run_port_reset,
+        'root-reset': _run_root_reset,
+    }
+    handler = actions.get(action)
+    if handler is None:
+        raise RuntimeError(f'Unsupported auto-recovery action: {action}')
+
+    if not _recovery_lock.acquire(blocking=False):
+        raise RuntimeError('A recovery action is already running')
+    try:
+        device = handler()
+        applied_hold = _set_recovery_hold(DEFAULT_RECOVERY_HOLD_SECONDS, f'auto {action}')
+        return device, applied_hold
+    finally:
+        _recovery_lock.release()
+
+
 @app.route('/api/pixelcade-recovery', methods=['POST'])
 def pixelcade_recovery():
     data = request.get_json(force=True)
@@ -284,6 +382,7 @@ def pixelcade_recovery():
     actions = {
         'authorize-reset': _run_authorize_reset,
         'driver-reset': _run_driver_reset,
+        'port-reset': _run_port_reset,
         'root-reset': _run_root_reset,
     }
 
