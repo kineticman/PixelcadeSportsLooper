@@ -103,6 +103,7 @@ The `sportslooper.ini` file controls behavior.
 - **[pixelcade]**:
   - `pixelcade_url`: Pixelcade server URL.
   - `health_check_interval`: Seconds between retry cycles.
+  - `confirm_output_seconds`: Seconds to wait for pixelweb to draw a widget before skipping its display window, so a failed data fetch doesn't hold a blank marquee (`0` disables; default `10`). Container runtime settings live in `app/config.json`.
 - **[weather]**:
   - `enabled`: true/false.
   - `zip_code`: ZIP code.

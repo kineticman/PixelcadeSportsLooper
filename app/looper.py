@@ -13,6 +13,15 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, 'config.json')
 
+# pixelweb logs every frame it hands to the panel. docker-compose mounts the
+# Pixelcade runtime dir read-only so we can confirm a widget actually rendered
+# instead of leaving the marquee dark until the widget's display window expires.
+PIXELWEB_LOG_PATH = os.environ.get('PIXELWEB_LOG_PATH', '/pixelcade/pixelweb-debug.log')
+PIXELWEB_FRAME_MARKERS = (b'[CGO] Image data has', b'Sending Image Bytes', b'Starting new stream')
+DEFAULT_CONFIRM_OUTPUT_SECONDS = 10.0
+MAX_SPORTS_RENDER_FAILURES = 3
+_pixelweb_log_offset = None
+
 # Shared state read by web.py for the status endpoint
 status = {
     'current_module': None,
@@ -142,7 +151,69 @@ def _minimum_display_seconds(cfg):
     return max(0, min(int(cfg.get('pixelcade', {}).get('minimum_display_seconds', 12)), 120))
 
 
-def _pixelcade_display_get(cfg, url, params=None, timeout=5, stop_event=None):
+def _confirm_output_seconds(cfg):
+    try:
+        return max(0.0, min(float(cfg.get('pixelcade', {}).get('confirm_output_seconds', DEFAULT_CONFIRM_OUTPUT_SECONDS)), 60.0))
+    except (TypeError, ValueError):
+        return DEFAULT_CONFIRM_OUTPUT_SECONDS
+
+
+def _drain_pixelweb_log():
+    """Remember where pixelweb's log ends so later reads only see new output.
+
+    Returns the offset to scan from, or None when the log isn't readable - in that
+    case output can't be confirmed and callers must assume the widget rendered.
+    """
+    global _pixelweb_log_offset
+    try:
+        size = os.path.getsize(PIXELWEB_LOG_PATH)
+    except OSError:
+        _pixelweb_log_offset = None
+        return None
+    if _pixelweb_log_offset is None or size < _pixelweb_log_offset:
+        _pixelweb_log_offset = size
+    return _pixelweb_log_offset
+
+
+def _pixelweb_log_since(offset):
+    if offset is None:
+        return b''
+    try:
+        with open(PIXELWEB_LOG_PATH, 'rb') as fh:
+            fh.seek(offset)
+            return fh.read()
+    except OSError:
+        return b''
+
+
+def _confirm_pixelweb_output(cfg, stop_event, offset):
+    """Wait briefly for pixelweb to write frames for the widget just requested.
+
+    Returns True when frames appear (or when the log can't be read, so a working
+    setup is never penalized), False when nothing was rendered in the window.
+    """
+    window = _confirm_output_seconds(cfg)
+    if window <= 0 or offset is None:
+        return True
+
+    deadline = time.monotonic() + window
+    while time.monotonic() < deadline:
+        if stop_event and stop_event.is_set():
+            return True
+        chunk = _pixelweb_log_since(offset)
+        if any(marker in chunk for marker in PIXELWEB_FRAME_MARKERS):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def _pixelcade_display_get(cfg, url, params=None, timeout=5, stop_event=None, confirm=False):
+    """Send a display request to pixelweb.
+
+    Returns True when the widget is confirmed to be rendering, or when confirmation
+    is disabled/unavailable. With confirm=True it returns False if pixelweb produced
+    no frames within the confirm window, which means the widget had nothing to draw.
+    """
     global last_pixelcade_display_request_at
     cooldown = _pixelcade_request_cooldown(cfg)
 
@@ -155,9 +226,12 @@ def _pixelcade_display_get(cfg, url, params=None, timeout=5, stop_event=None):
                 raise requests.RequestException('Stop requested during Pixelcade display cooldown')
 
         try:
+            offset = _drain_pixelweb_log() if confirm else None
             resp = requests.get(url, params=params, timeout=timeout)
             resp.raise_for_status()
-            return resp
+            if not confirm:
+                return True
+            return _confirm_pixelweb_output(cfg, stop_event, offset)
         finally:
             last_pixelcade_display_request_at = time.monotonic()
 
@@ -239,6 +313,7 @@ def _display_sports(cfg, pixelcade_url, date, stop_event):
     seconds_per_game = mod.get('seconds_per_game', 4)
     use_filter = mod.get('use_team_filter', True)
     leagues_cfg = mod.get('leagues', {})
+    render_failures = 0
 
     for league in SUPPORTED_LEAGUES:
         if stop_event.is_set():
@@ -267,8 +342,29 @@ def _display_sports(cfg, pixelcade_url, date, stop_event):
             logging.debug(f"No games for {league} on {date}")
             continue
 
-        _pixelcade_display_get(cfg, f"{pixelcade_url}/sports/{league}", params=params, timeout=5, stop_event=stop_event)
+        rendered = _pixelcade_display_get(
+            cfg,
+            f"{pixelcade_url}/sports/{league}",
+            params=params,
+            timeout=5,
+            stop_event=stop_event,
+            confirm=True,
+        )
         display_seconds = max(max(len(games), 1) * seconds_per_game, _minimum_display_seconds(cfg))
+        if not rendered:
+            render_failures += 1
+            logging.warning(
+                f"Sports ticker for {league} rendered nothing (pixelweb could not fetch its data); "
+                f"skipping its {display_seconds}s display window"
+            )
+            if render_failures >= MAX_SPORTS_RENDER_FAILURES:
+                logging.warning(
+                    "Sports tickers are not rendering; moving on to the next module instead of "
+                    "holding a blank marquee"
+                )
+                return
+            continue
+        render_failures = 0
         if _sleep(display_seconds, stop_event):
             return
 

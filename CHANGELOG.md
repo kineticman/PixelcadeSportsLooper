@@ -4,6 +4,9 @@
 ### Changed
 - **Pixelcade USB root auto-detection**: recovery root resets now target the USB root hub the detected device is attached to, falling back to the configured `pixelcade.usb_root` only when no device is present, so recovery survives moving the marquee to a different port.
 
+### Fixed
+- **Blank marquee during sports tickers**: the looper now confirms pixelweb actually drew each sports ticker before waiting out that league's display window, and moves on after repeated failures instead of leaving the panel dark for a full minute when a scoreboard fetch fails. Configurable from the Pixelcade tab in the admin UI, or via `pixelcade.confirm_output_seconds` (`0` disables).
+
 ---
 
 ## [1.3] - 2025-08-17

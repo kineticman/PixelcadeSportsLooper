@@ -345,6 +345,19 @@
                   <input type="number" class="form-control" id="minimumDisplaySeconds" min="0" max="120">
                 </div>
               </div>
+              <div class="row g-2 mt-2 align-items-start">
+                <div class="col">
+                  <div class="form-check form-switch mb-1">
+                    <input class="form-check-input" type="checkbox" id="confirmOutputEnabled" onchange="syncConfirmOutput()">
+                    <label class="form-check-label" for="confirmOutputEnabled">Confirm widget output</label>
+                  </div>
+                  <div class="form-text mb-0">Skip the rest of a widget's display window when pixelweb never drew it</div>
+                </div>
+                <div class="col">
+                  <label class="form-label">Confirmation window (s)</label>
+                  <input type="number" class="form-control" id="confirmOutputSeconds" min="1" max="60">
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -523,6 +536,10 @@ function populateAll() {
   document.getElementById('healthTimeout').value   = cfg.pixelcade?.health_check_timeout ?? 10;
   document.getElementById('requestCooldown').value  = cfg.pixelcade?.request_cooldown_seconds ?? 2;
   document.getElementById('minimumDisplaySeconds').value = cfg.pixelcade?.minimum_display_seconds ?? 12;
+  const confirmSeconds = cfg.pixelcade?.confirm_output_seconds ?? 10;
+  document.getElementById('confirmOutputEnabled').checked = confirmSeconds > 0;
+  document.getElementById('confirmOutputSeconds').value = confirmSeconds > 0 ? confirmSeconds : 10;
+  syncConfirmOutput();
   renderUsbRootOptions({available_usb_roots: [], usb_root: cfg.pixelcade?.usb_root ?? '', detected_usb_root: ''});
   document.getElementById('startupBanner').value   = cfg.startup?.banner ?? '';
 
@@ -742,6 +759,9 @@ function buildConfig() {
       startup_grace_period: cfg.pixelcade?.startup_grace_period ?? 15,
       request_cooldown_seconds: parseFloat(document.getElementById('requestCooldown').value) || 0,
       minimum_display_seconds: parseInt(document.getElementById('minimumDisplaySeconds').value) || 0,
+      confirm_output_seconds: document.getElementById('confirmOutputEnabled')?.checked
+        ? (parseInt(document.getElementById('confirmOutputSeconds').value) || 10)
+        : 0,
       usb_root: document.getElementById('usbRoot')?.value || cfg.pixelcade?.usb_root || '',
     },
     startup: {
@@ -846,6 +866,13 @@ async function sendManualCommand() {
 }
 
 
+
+function syncConfirmOutput() {
+  const enabled = document.getElementById('confirmOutputEnabled');
+  const seconds = document.getElementById('confirmOutputSeconds');
+  if (!enabled || !seconds) return;
+  seconds.disabled = !enabled.checked;
+}
 
 function renderUsbRootOptions(data) {
   const select = document.getElementById('usbRoot');

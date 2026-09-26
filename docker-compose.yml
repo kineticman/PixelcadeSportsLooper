@@ -64,6 +64,7 @@ services:
       TZ: America/New_York
     volumes:
       - ./app/config.json:/app/config.json
+      - ./pixelcade-runtime:/pixelcade:ro
       - /dev:/host-dev:ro
       - /sys:/host-sys
       - /etc/localtime:/etc/localtime:ro
