@@ -6,6 +6,7 @@
     "startup_grace_period": 15,
     "request_cooldown_seconds": 2,
     "minimum_display_seconds": 12,
+    "confirm_output_seconds": 10,
     "usb_root": "usb3"
   },
   "startup": {
@@ -61,7 +62,7 @@
         "teams": ""
       },
       "eng.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "esp.1": {
