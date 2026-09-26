@@ -68,6 +68,7 @@ def auto_recovery_loop(stop_event):
                     logging.info("Pixelcade serial device is back")
                 missing_since = None
                 attempts = 0
+                web.refresh_device_location()
                 with status_lock:
                     status['pixelcade_auto_recovery_state'] = 'idle'
                     status['pixelcade_auto_recovery_attempts'] = 0

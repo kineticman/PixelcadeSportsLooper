@@ -12,6 +12,9 @@
 - **Log rotation for the Pixelcade listener**: `deploy/logrotate-pixelcade.conf` caps `pixelweb-debug.log` at 100 MB with three compressed rotations, since the file otherwise grows unbounded.
 - **Auto-recovery for a missing marquee**: after a failed USB power-on the kernel stops retrying enumeration and the panel stays dark until the cable is reseated. A watchdog thread now power-cycles the port the marquee was last seen on (the software equivalent of replugging it), escalating to a root-hub reset on alternate attempts, with backoff. Toggle and timings are in the Pixelcade tab of the admin UI.
 
+### Fixed
+- **Stale serial handle after a port move**: when the marquee re-enumerated under a new device name, pixelweb kept running while writing to the deleted old node, leaving the panel stuck on its startup logo. The container supervisor now restarts pixelweb when the device name changes, not just when no device is present. The auto-recovery watchdog also refreshes which port the marquee was last seen on, so its port reset follows a move.
+
 ---
 
 ## [1.3] - 2025-08-17

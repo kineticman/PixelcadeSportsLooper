@@ -350,6 +350,15 @@ def pixelcade_recovery_status():
     })
 
 
+def refresh_device_location():
+    """Refresh the remembered USB port for the marquee.
+
+    The watchdog calls this while the device is healthy, so that a recovery after
+    a port move power-cycles the port the marquee was actually last seen on.
+    """
+    _discover_pixelcade_usb_devices()
+
+
 def run_auto_recovery(action):
     """Run a recovery action from the auto-recovery watchdog in main.py.
 

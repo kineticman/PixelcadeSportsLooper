@@ -5,6 +5,10 @@ services:
       - sh
       - -c
       - |
+        device_nodes() {
+          ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | sort | tr '\n' ' '
+        }
+
         device_present() {
           for dev in /dev/ttyACM* /dev/ttyUSB*; do
             [ -e "$$dev" ] && return 0
@@ -18,6 +22,8 @@ services:
             sleep 10
           done
 
+          nodes="$$(device_nodes)"
+          echo "Starting pixelweb for device(s): $$nodes"
           /pixelcade/pixelweb -port 8080 -p /pixelcade -d auto -devicescan -delay 10 -nointro &
           pid=$$!
           missing=0
@@ -25,6 +31,19 @@ services:
           while kill -0 "$$pid" 2>/dev/null; do
             if device_present; then
               missing=0
+              current="$$(device_nodes)"
+              if [ "$$current" != "$$nodes" ]; then
+                # The device re-enumerated and may have a new node name, which
+                # pixelweb would otherwise keep writing to a deleted handle.
+                echo "Pixelcade device changed ($$nodes -> $$current); restarting pixelweb..."
+                kill "$$pid" 2>/dev/null || true
+                sleep 3
+                if kill -0 "$$pid" 2>/dev/null; then
+                  kill -9 "$$pid" 2>/dev/null || true
+                fi
+                wait "$$pid" 2>/dev/null || true
+                break
+              fi
             else
               missing=$$((missing + 1))
               if [ "$$missing" -ge 3 ]; then
