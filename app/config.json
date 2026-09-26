@@ -7,6 +7,7 @@
     "request_cooldown_seconds": 2,
     "minimum_display_seconds": 12,
     "confirm_output_seconds": 10,
+    "output_stall_seconds": 15,
     "auto_recovery": true,
     "auto_recovery_after_seconds": 120,
     "auto_recovery_interval_seconds": 300,

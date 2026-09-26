@@ -14,7 +14,7 @@
 
 ### Fixed
 - **Stale serial handle after a port move**: when the marquee re-enumerated under a new device name, pixelweb kept running while writing to the deleted old node, leaving the panel stuck on its startup logo. The container supervisor now restarts pixelweb when the device name changes, not just when no device is present. The auto-recovery watchdog also refreshes which port the marquee was last seen on, so its port reset follows a move.
-- **Black screen during long sports windows**: pixelweb's sports ticker stops itself at its 60s refresh boundary, and if it does not resume, the panel stayed black for the rest of that league's display window (minutes, on a full college football slate). The looper now watches for output during the window and moves on after `OUTPUT_STALL_SECONDS` of silence instead of waiting it out.
+- **Black screen during long sports windows**: pixelweb's sports ticker stops itself at its 60s refresh boundary, and if it does not resume, the panel stayed black for the rest of that league's display window (minutes, on a full college football slate). The looper now watches for output during the window and moves on after `pixelcade.output_stall_seconds` (default `15`, adjustable in the admin UI) of silence instead of waiting it out.
 
 ---
 

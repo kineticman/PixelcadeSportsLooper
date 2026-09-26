@@ -168,6 +168,13 @@ def _confirm_output_seconds(cfg):
         return DEFAULT_CONFIRM_OUTPUT_SECONDS
 
 
+def _output_stall_seconds(cfg):
+    try:
+        return max(5.0, min(float(cfg.get('pixelcade', {}).get('output_stall_seconds', OUTPUT_STALL_SECONDS)), 120.0))
+    except (TypeError, ValueError):
+        return float(OUTPUT_STALL_SECONDS)
+
+
 def _drain_pixelweb_log():
     """Remember where pixelweb's log ends so later reads only see new output.
 
@@ -420,7 +427,9 @@ def _display_sports(cfg, pixelcade_url, date, stop_event):
                 return
             continue
         render_failures = 0
-        if not _sleep_watching_output(display_seconds, stop_event, _drain_pixelweb_log()):
+        if not _sleep_watching_output(
+            display_seconds, stop_event, _drain_pixelweb_log(), _output_stall_seconds(cfg)
+        ):
             render_failures += 1
             logging.warning(
                 f"Pixelweb stopped drawing during the {display_seconds}s {league} window; "

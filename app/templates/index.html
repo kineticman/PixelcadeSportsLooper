@@ -357,6 +357,10 @@
                   <label class="form-label">Confirmation window (s)</label>
                   <input type="number" class="form-control" id="confirmOutputSeconds" min="1" max="60">
                 </div>
+                <div class="col">
+                  <label class="form-label">Stall timeout (s)</label>
+                  <input type="number" class="form-control" id="outputStallSeconds" min="5" max="120">
+                </div>
               </div>
               <div class="row g-2 mt-2 align-items-start">
                 <div class="col">
@@ -556,6 +560,7 @@ function populateAll() {
   const confirmSeconds = cfg.pixelcade?.confirm_output_seconds ?? 10;
   document.getElementById('confirmOutputEnabled').checked = confirmSeconds > 0;
   document.getElementById('confirmOutputSeconds').value = confirmSeconds > 0 ? confirmSeconds : 10;
+  document.getElementById('outputStallSeconds').value = cfg.pixelcade?.output_stall_seconds ?? 15;
   syncConfirmOutput();
   document.getElementById('autoRecoveryEnabled').checked = cfg.pixelcade?.auto_recovery ?? true;
   document.getElementById('autoRecoveryAfter').value = cfg.pixelcade?.auto_recovery_after_seconds ?? 120;
@@ -783,6 +788,7 @@ function buildConfig() {
       confirm_output_seconds: document.getElementById('confirmOutputEnabled')?.checked
         ? (parseInt(document.getElementById('confirmOutputSeconds').value) || 10)
         : 0,
+      output_stall_seconds: parseInt(document.getElementById('outputStallSeconds').value) || 15,
       auto_recovery: document.getElementById('autoRecoveryEnabled')?.checked ?? true,
       auto_recovery_after_seconds: parseInt(document.getElementById('autoRecoveryAfter').value) || 120,
       auto_recovery_interval_seconds: parseInt(document.getElementById('autoRecoveryInterval').value) || 300,
