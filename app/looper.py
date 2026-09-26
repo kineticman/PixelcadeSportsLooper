@@ -20,6 +20,8 @@ PIXELWEB_LOG_PATH = os.environ.get('PIXELWEB_LOG_PATH', '/pixelcade/pixelweb-deb
 PIXELWEB_FRAME_MARKERS = (b'[CGO] Image data has', b'Sending Image Bytes', b'Starting new stream')
 DEFAULT_CONFIRM_OUTPUT_SECONDS = 10.0
 MAX_SPORTS_RENDER_FAILURES = 3
+# How long pixelweb may go without drawing before we abandon a display window.
+OUTPUT_STALL_SECONDS = 15
 # pixelweb's primary weather source fails slowly before falling back to Open-Meteo
 # (measured 0-17s), so the weather request needs a longer budget than the usual 5s.
 WEATHER_REQUEST_TIMEOUT = 20
@@ -215,6 +217,35 @@ def _confirm_pixelweb_output(cfg, stop_event, offset):
     return False
 
 
+def _sleep_watching_output(seconds, stop_event, offset, stall_seconds=OUTPUT_STALL_SECONDS):
+    """Sleep out a display window, bailing early if pixelweb stops drawing.
+
+    Returns True when the window ran its course (or stop was requested), False when
+    the panel went quiet mid-window. pixelweb's tickers stop themselves at their
+    refresh boundary, which otherwise leaves the marquee black for the remainder of
+    a long window.
+    """
+    if offset is None:
+        return not _sleep(seconds, stop_event)
+
+    deadline = time.monotonic() + max(1, int(seconds))
+    last_output = time.monotonic()
+    position = offset
+
+    while time.monotonic() < deadline:
+        if stop_event is not None and stop_event.is_set():
+            return True
+        time.sleep(1)
+        chunk = _pixelweb_log_since(position)
+        if chunk:
+            position += len(chunk)
+            if any(marker in chunk for marker in PIXELWEB_FRAME_MARKERS):
+                last_output = time.monotonic()
+        if time.monotonic() - last_output > stall_seconds:
+            return False
+    return True
+
+
 def _pixelcade_display_get(cfg, url, params=None, timeout=5, stop_event=None, confirm=False):
     """Send a display request to pixelweb.
 
@@ -389,7 +420,19 @@ def _display_sports(cfg, pixelcade_url, date, stop_event):
                 return
             continue
         render_failures = 0
-        if _sleep(display_seconds, stop_event):
+        if not _sleep_watching_output(display_seconds, stop_event, _drain_pixelweb_log()):
+            render_failures += 1
+            logging.warning(
+                f"Pixelweb stopped drawing during the {display_seconds}s {league} window; "
+                "moving on to the next league"
+            )
+            if render_failures >= MAX_SPORTS_RENDER_FAILURES:
+                logging.warning(
+                    "Sports tickers keep going quiet; moving on to the next module"
+                )
+                return
+            continue
+        if stop_event.is_set():
             return
 
 
