@@ -12,6 +12,8 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, 'config.json')
+# Host sysfs (where the container can see the real tty devices)
+HOST_SYS_PATH = os.environ.get('HOST_SYS_PATH', '/host-sys')
 
 # pixelweb logs every frame it hands to the panel. docker-compose mounts the
 # Pixelcade runtime dir read-only so we can confirm a widget actually rendered
@@ -114,6 +116,15 @@ def _pixelcade_health_request(pixelcade_url, timeout):
 
 
 def _serial_device_present():
+    # sysfs is authoritative. A container's /dev is snapshotted when the container
+    # starts, so it can keep a stale node for a device that has since been unplugged
+    # - which would leave the watchdog thinking a missing marquee is present.
+    for pattern in ('ttyACM*', 'ttyUSB*'):
+        if glob.glob(os.path.join(HOST_SYS_PATH, 'class', 'tty', pattern)):
+            return True
+    if os.path.isdir(HOST_SYS_PATH):
+        return False
+
     for root in ('/host-dev', '/dev'):
         if not os.path.isdir(root):
             continue
