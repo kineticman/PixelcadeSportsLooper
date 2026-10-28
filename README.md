@@ -1,128 +1,174 @@
 # SportsLooper
 
-**SportsLooper** is a Python script that displays sports scores, weather, stock prices, and a clock on a Pixelcade LED marquee. It runs as a background service on Windows or Raspberry Pi (Linux), fetching data from the ESPN API and a Pixelcade server. The project is configurable via an INI file and supports robust error handling for offline scenarios.
+SportsLooper is a Python service for driving a Pixelcade or BitPixel LED marquee. It
+cycles through same-day ESPN scoreboards, local weather, customizable clocks, and
+other display modules while exposing a Flask admin UI for configuration and device
+recovery.
+
+The current runtime lives in [`app/`](app/) and is designed to run with Docker
+Compose on Linux. It runs alongside Pixelcade's `pixelweb` listener and sends display
+requests to the Pixelcade HTTP API.
 
 ## Features
-- **⚠ NEWS Module Status**: New in V1.1
-- **Dynamic Display**: Cycles through modules (weather, clock, sports, stocks, news) on a Pixelcade LED marquee.
-- **Sports Scores**: Fetches real-time scores from the ESPN API for 19 leagues (e.g., NFL, NBA, MLB, European soccer).
-- **Configurable Modules**: Enable/disable modules and set display durations via `sportslooper.ini`.
-- **Team Filtering**: Filter sports scores by specific teams per league (e.g., `NYY,BOS` for MLB).
-- **Weather Display**: Shows weather for a specified ZIP code (e.g., `90210`).
-- **Stock Prices**: Displays stock tickers (e.g., `AAPL,GOOGL`) with customizable duration.
-- **Robust Error Handling**: Retries Pixelcade server connections (3 attempts, 2-second delays) every 30 seconds when offline.
-- **Log Rotation**: Logs to `sportslooper.log` and `fallback.log` with 1 MB max size and 5 backups (~12 MB total).
-- **Background Execution**: Runs as a Windows service (with delayed start option) or a `systemd` service on Raspberry Pi.
-- **Debug Mode**: Detailed console output for troubleshooting when enabled.
 
-## Installation
+- **Sports:** 19 ESPN leagues, including the NFL, NBA, NHL, MLB, college sports,
+  MLS, major European soccer leagues, and the UEFA Champions League.
+- **Team filtering:** Limit a league to specific team abbreviations, such as
+  `NYY,BOS` for MLB.
+- **Weather and clocks:** ZIP-code weather plus digital, word, retro-arcade, and
+  character-themed clocks.
+- **Optional modules:** Stocks, RSS news tickers, and 21 Pixelcade widgets for
+  media servers, music services, calendars, fantasy sports, Formula 1, and more.
+- **Admin UI:** Enable modules, reorder the display sequence, edit league filters,
+  test Pixelcade connectivity, and send manual Pixelcade commands from one page.
+- **Live updates:** Saved configuration is reloaded at the start of each module
+  cycle, so most changes do not require a restart.
+- **Marquee recovery:** Health checks, render confirmation, output-stall detection,
+  and USB auto-recovery help recover from a blank or disconnected panel.
 
-### Prerequisites
-- **Python**: Python 3.9+.
-- **Dependencies**:
-  - Windows: `pip install requests tenacity pywin32`
-  - Raspberry Pi: `pip3 install requests tenacity`
-- **Pixelcade Server**: Running on `http://localhost:8080` (configurable).
-- **Disk Space**: ~12 MB for logs.
-- **Permissions**:
-  - Windows: Administrator access for service installation.
-  - Raspberry Pi: Write access to project directory for `pi` user.
+> OAuth-backed widgets require their accounts and credentials to be configured in
+> Pixelcade Companion before SportsLooper can display them.
 
-### Installation on Windows
-1. **Clone or Download**:
-   - Place `sportslooper.py` and `sportslooper.ini` in `C:\Sportslooper`.
-   - Ensure the directory is writable by the `SYSTEM` account:
-     ```powershell
-     icacls C:\SportsLooper /grant "SYSTEM:F" /T
-     ```
-2. **Configure `sportslooper.ini`**:
-   - Edit `C:\SportsLooper\sportslooper.ini` (see [Configuration Highlights](#configuration-highlights)).
-3. **Install Dependencies**:
-   ```powershell
-   cd C:\SportsLooper
-   pip install requests tenacity pywin32
-   ```
-4. **Test Standalone**:
-   ```powershell
-   python sportslooper.py
-   ```
-5. **Install as Windows Service**:
-   ```powershell
-   python sportslooper.py install
-   python sportslooper.py update --startup delayed-auto
-   net start SportsLooper
-   ```
+## Requirements
 
-### Installation on Raspberry Pi
-1. **Install Python and Dependencies**:
-   ```bash
-   sudo apt update && sudo apt upgrade
-   sudo apt install python3 python3-pip
-   pip3 install requests tenacity
-   ```
-2. **Copy Files**:
-   ```bash
-   mkdir -p /home/pi/sportslooper
-   cd /home/pi/sportslooper
-   ```
-3. **Configure `sportslooper.ini`**:
-   - Edit `/home/pi/sportslooper/sportslooper.ini`.
-4. **Test Standalone**:
-   ```bash
-   python3 sportslooper.py
-   ```
-5. **Create `systemd` Service**:
-   ```bash
-   sudo nano /etc/systemd/system/sportslooper.service
-   ```
-   Add:
-   ```
-   [Unit]
-   Description=SportsLooper Service
-   After=network.target
+- A Linux host with Docker Engine and Docker Compose v2.
+- A supported Pixelcade or BitPixel USB marquee.
+- A matching Pixelcade Linux runtime in `pixelcade-runtime/`, including `pixelweb`
+  and its assets. Compose mounts this directory into both services; it is not
+  downloaded by the SportsLooper image.
+- Network access from the host for ESPN's public API and any configured weather,
+  news, or widget providers.
 
-   [Service]
-   ExecStart=/usr/bin/python3 /home/pi/sportslooper/sportslooper.py
-   WorkingDirectory=/home/pi/sportslooper
-   Restart=always
-   User=pi
-   Group=pi
+The Compose setup uses host networking because `pixelweb` must communicate with the
+marquee over USB. The recovery controls also need access to `/dev` and `/sys`.
 
-   [Install]
-   WantedBy=multi-user.target
-   ```
-   Then:
-   ```bash
-   sudo systemctl enable sportslooper
-   sudo systemctl start sportslooper
-   ```
+## Quick Start
 
-## Configuration Highlights
-The `sportslooper.ini` file controls behavior.
+```bash
+git clone git@github.com:kineticman/PixelcadeSportsLooper.git
+cd PixelcadeSportsLooper
 
-- **[pixelcade]**:
-  - `pixelcade_url`: Pixelcade server URL.
-  - `health_check_interval`: Seconds between retry cycles.
-  - `confirm_output_seconds`: Seconds to wait for pixelweb to draw a widget before skipping its display window, so a failed data fetch doesn't hold a blank marquee (`0` disables; default `10`). Container runtime settings live in `app/config.json`.
-  - `output_stall_seconds`: How long pixelweb may go without drawing before the looper gives up on the current display window and moves on (default `15`). Keeps a stalled sports ticker from leaving the panel black for a whole multi-minute window.
-  - `auto_recovery`: Power-cycle the marquee's USB port when it stops answering USB enumeration, retrying on a backoff (`true` by default). `auto_recovery_after_seconds` (default `120`) is how long the device must be missing first, and `auto_recovery_interval_seconds` (default `300`) is the gap between attempts.
-- **[weather]**:
-  - `enabled`: true/false.
-  - `zip_code`: ZIP code.
-  - `duration`: Display time.
-- **[sports]**:
-  - `league_name`: Enable/disable leagues.
-  - `league_name_teams`: Team filter.
-- **[order]**:
-  - `sequence`: Module order.
+# Put the Pixelcade Linux runtime in this directory first. It is intentionally
+# ignored by Git because it contains the platform-specific binary and artwork.
+test -x pixelcade-runtime/pixelweb
 
-After editing, restart the service.
+docker compose up -d --build
+docker compose logs -f sportslooper
+```
 
-## Troubleshooting
-- **Service Fails to Start**: Check Event Viewer (Windows) or `journalctl` (Pi).
-- **No Logs**: Confirm file permissions.
-- **Pixelcade Offline**: Retries every 30 seconds and logs to `fallback.log`.
-- **Pixelcade log growing large**: `pixelcade-runtime/pixelweb-debug.log` grows ~20-50 MB/day with debug logging on. Install `deploy/logrotate-pixelcade.conf` to `/etc/logrotate.d/pixelcade` to cap it at 100 MB with three compressed rotations.
+Open `http://<host-ip>:6992` to use the admin UI. Pixelcade's `pixelweb` API defaults
+to port `8080`; set the server URL on the Pixelcade tab if yours differs, then use
+**Test** to verify the connection.
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+## How It Runs
+
+`docker-compose.yml` starts two services with access to the host network:
+
+- `pixelweb` runs the Pixelcade listener and restarts it if the USB device disappears
+  or re-enumerates under a different device node.
+- `sportslooper` runs the background display loop and the admin UI. It mounts the
+  host's `/dev` and `/sys` trees so Pixelcade health checks and USB recovery can see
+  the real hardware.
+
+The looper waits for `/info` to report initialized LED hardware, displays the startup
+banner, then cycles through `order.sequence` in `app/config.json`. A module must also
+have `enabled: true` to display.
+
+## Configuration
+
+Use the admin UI for normal changes. Settings are written to
+[`app/config.json`](app/config.json), which Compose bind-mounts into the container.
+The file is the source of truth, so it can also be edited directly when the service
+is stopped.
+
+The main sections are:
+
+| Section | Purpose |
+| --- | --- |
+| `pixelcade` | Pixelcade URL, health checks, timing, output confirmation, and USB recovery |
+| `order.sequence` | Modules to cycle through and their display order |
+| `sports.leagues` | League toggles and optional team-abbreviation filters |
+| `weather`, `clock` | Location, display time, and clock appearance |
+| `stocks`, `news` | Optional stock ticker and RSS feed settings |
+| Widget sections | Enable and set display duration for Pixelcade Companion widgets |
+
+Default display timing is controlled by the module's `duration`. Sports use
+`sports.seconds_per_game` for each matching game. `pixelcade.minimum_display_seconds`
+keeps fast modules on screen for a usable minimum.
+
+For marquee troubleshooting, the Pixelcade tab also exposes:
+
+- `confirm_output_seconds`: Wait for `pixelweb` to write a frame before consuming the
+  module's display window. Set to `0` to disable.
+- `output_stall_seconds`: Move on when `pixelweb` stops drawing during a sports
+  window.
+- `auto_recovery`: Power-cycle the marquee's USB port after it disappears, using a
+  configurable delay and retry interval.
+
+Do not commit private feed URLs, account credentials, or other secrets to
+`app/config.json`.
+
+## Run Without Docker
+
+Local development requires Python 3.9 or newer and a Pixelcade server reachable from
+the host.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python app/main.py
+```
+
+The admin UI is available at `http://127.0.0.1:6992`. USB recovery features depend on
+the host's `/sys` layout and may require elevated privileges; the Docker setup is the
+supported deployment path.
+
+## Logging and Troubleshooting
+
+- SportsLooper logs to `app/sportslooper.log` and stdout. The file rotates at 1 MB
+  with five backups.
+- `pixelcade-runtime/pixelweb-debug.log` is Pixelcade's own log. If it grows quickly,
+  update the example's paths and owning user for your host, then install
+  [`deploy/logrotate-pixelcade.conf`](deploy/logrotate-pixelcade.conf) as
+  `/etc/logrotate.d/pixelcade`.
+- If the admin UI is unreachable, run `docker compose ps` and
+  `docker compose logs sportslooper`.
+- If Pixelcade reports offline, check `pixelcade-runtime/pixelweb.log`, the configured
+  server URL, and whether the marquee's USB device is present.
+- If the marquee is blank, use the Pixelcade tab's connection and recovery controls.
+  Avoid repeated root-hub resets until the simpler USB reconnect action has been
+  tried.
+
+Run the repository's basic syntax check after changing Python code:
+
+```bash
+python -m py_compile app/*.py sportslooper.py piVersion.py
+```
+
+There is currently no automated test suite.
+
+## Project Layout
+
+```text
+app/                    Current Docker runtime and admin UI
+app/config.json         Active runtime configuration
+deploy/                 Host log-rotation configuration
+docs/                   GitHub Pages landing page
+pixelcade-runtime/      Local Pixelcade installation (ignored by Git)
+prototype/              Local experiments (ignored by Git)
+```
+
+The root-level `sportslooper.py`, `piVersion.py`, and `sportslooper.ini` are retained
+for older standalone and Raspberry Pi workflows. They are not the current Docker
+runtime and may not include newer modules or recovery behavior.
 
 ## License
-MIT License. See LICENSE for details.
+
+No license file is currently included in this repository.

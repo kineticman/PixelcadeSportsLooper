@@ -1,18 +1,52 @@
-﻿# Logs
+# Logs
 *.log
 *.log.*
 fallback.log
 service_error.log
 
-# Local Pixelcade listener runtime
+# Pixelcade listener runtime and machine-specific configuration
 pixelcade.ini
 pixelcade.ini.backup.*
 pixelcade-runtime/
 
-# Python cache
-__pycache__/
-*.pyc
+# Local experiments and generated reverse-engineering captures
+prototype/
 
-# OS cruft
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and agent-local state
+.claude/settings.local.json
+.codex/
+.agents/
+.aws/
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Local Docker overrides
+docker-compose.override.yml
+docker-compose.override.yaml

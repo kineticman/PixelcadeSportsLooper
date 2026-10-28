@@ -1,35 +1,43 @@
 ---
 title: Pixelcade SportsLooper
-description: Sports and Weather Looper for Pixelcade LED marquees — cycles ESPN scores, weather, stocks, and news using a Python Windows/Raspberry Pi service.
+description: Sports scores, weather, clocks, and media widgets for Pixelcade LED marquees.
 ---
 
 # Pixelcade SportsLooper
 
-Pixelcade SportsLooper is a **Python service** that displays live **sports scores, weather, stocks, and news** on Pixelcade LED marquees.  
-It integrates with the ESPN API and runs as either a Windows service or on Linux (systemd).
-
-![Pixelcade SportsLooper Demo](assets/demo.gif)
+Pixelcade SportsLooper is a **Python service** that displays live sports scores,
+weather, clocks, and optional media widgets on Pixelcade and BitPixel LED marquees.
+It runs alongside Pixelcade's `pixelweb` listener and includes a web admin UI for
+configuration, connection testing, and USB recovery.
 
 ## Features
-- Loops through multiple sports leagues (NFL, NBA, NHL, MLB, NCAA, Soccer, and more)
-- Weather, stocks, and custom text modules
-- Adjustable display durations via `pixelcade_sports.ini`
-- Full logging of all display actions
-- Runs headless — no user interaction required once started
 
-## Installation
-Clone and follow the instructions in the README:
+- Same-day scores from 19 ESPN leagues, with optional team filters
+- ZIP-code weather and customizable digital, word, and retro-arcade clocks
+- Optional stocks, RSS news, and Pixelcade Companion widgets
+- Drag-and-drop module ordering and live configuration updates
+- Health checks, render confirmation, output-stall detection, and USB auto-recovery
+- Docker Compose deployment with host networking for the USB-connected marquee
+
+## Quick Start
+
+Install a matching Pixelcade Linux runtime in `pixelcade-runtime/`, then clone and
+start the stack:
 
 ```bash
 git clone https://github.com/kineticman/PixelcadeSportsLooper.git
 cd PixelcadeSportsLooper
+docker compose up -d --build
 ```
 
-See the [README](../README.md) for detailed setup instructions.
+Open `http://<host-ip>:6992` to configure the looper. See the
+[README](https://github.com/kineticman/PixelcadeSportsLooper/blob/main/README.md)
+for prerequisites, local development, configuration, and troubleshooting.
 
 ## Links
+
 - [Source Code on GitHub](https://github.com/kineticman/PixelcadeSportsLooper)
-- [Releases](https://github.com/kineticman/PixelcadeSportsLooper/releases)
+- [Issues](https://github.com/kineticman/PixelcadeSportsLooper/issues)
 
 ---
 
