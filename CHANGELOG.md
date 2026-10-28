@@ -1,18 +1,18 @@
 # Changelog
 
 ## [Unreleased]
-### Changed
-- **Pixelcade USB root auto-detection**: recovery root resets now target the USB root hub the detected device is attached to, falling back to the configured `pixelcade.usb_root` only when no device is present, so recovery survives moving the marquee to a different port.
-
-### Fixed
-- **Blank marquee during sports tickers**: the looper now confirms pixelweb actually drew each sports ticker before waiting out that league's display window, and moves on after repeated failures instead of leaving the panel dark for a full minute when a scoreboard fetch fails. Configurable from the Pixelcade tab in the admin UI, or via `pixelcade.confirm_output_seconds` (`0` disables).
-- **Weather widget never appearing**: pixelweb holds a new request while it cancels the previous widget (34% of weather requests took over 5s to be accepted, up to 21s), so the looper's 5s timeout fired almost every cycle. It then moved on immediately, cancelling the weather widget before it could draw. The weather request now allows 20s, and a read timeout is treated as a queued payload rather than a failure, so the widget keeps its display window either way.
-
 ### Added
 - **Log rotation for the Pixelcade listener**: `deploy/logrotate-pixelcade.conf` caps `pixelweb-debug.log` at 100 MB with three compressed rotations, since the file otherwise grows unbounded.
 - **Auto-recovery for a missing marquee**: after a failed USB power-on the kernel stops retrying enumeration and the panel stays dark until the cable is reseated. A watchdog thread now power-cycles the port the marquee was last seen on (the software equivalent of replugging it), escalating to a root-hub reset on alternate attempts, with backoff. Toggle and timings are in the Pixelcade tab of the admin UI.
 
+### Changed
+- **Pixelcade USB root auto-detection**: recovery root resets now target the USB root hub the detected device is attached to, falling back to the configured `pixelcade.usb_root` only when no device is present, so recovery survives moving the marquee to a different port.
+- **Configuration is local state**: `app/config.json` is no longer tracked. New installations copy `app/config.example.json` and configure the app through the admin UI.
+- **Repository cleanup**: removed the superseded standalone Windows/Raspberry Pi runtime, INI configuration, and vendored RetroPie installer.
+
 ### Fixed
+- **Blank marquee during sports tickers**: the looper now confirms pixelweb actually drew each sports ticker before waiting out that league's display window, and moves on after repeated failures instead of leaving the panel dark for a full minute when a scoreboard fetch fails. Configurable from the Pixelcade tab in the admin UI, or via `pixelcade.confirm_output_seconds` (`0` disables).
+- **Weather widget never appearing**: pixelweb holds a new request while it cancels the previous widget (34% of weather requests took over 5s to be accepted, up to 21s), so the looper's 5s timeout fired almost every cycle. It then moved on immediately, cancelling the weather widget before it could draw. The weather request now allows 20s, and a read timeout is treated as a queued payload rather than a failure, so the widget keeps its display window either way.
 - **Stale serial handle after a port move**: when the marquee re-enumerated under a new device name, pixelweb kept running while writing to the deleted old node, leaving the panel stuck on its startup logo. The container supervisor now restarts pixelweb when the device name changes, not just when no device is present. The auto-recovery watchdog also refreshes which port the marquee was last seen on, so its port reset follows a move.
 - **Black screen during long sports windows**: pixelweb's sports ticker stops itself at its 60s refresh boundary, and if it does not resume, the panel stayed black for the rest of that league's display window (minutes, on a full college football slate). The looper now watches for output during the window and moves on after `pixelcade.output_stall_seconds` (default `15`, adjustable in the admin UI) of silence instead of waiting it out.
 

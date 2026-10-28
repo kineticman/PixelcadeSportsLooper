@@ -52,6 +52,7 @@ cd PixelcadeSportsLooper
 # ignored by Git because it contains the platform-specific binary and artwork.
 test -x pixelcade-runtime/pixelweb
 
+cp app/config.example.json app/config.json
 docker compose up -d --build
 docker compose logs -f sportslooper
 ```
@@ -82,10 +83,15 @@ have `enabled: true` to display.
 
 ## Configuration
 
-Use the admin UI for normal changes. Settings are written to
-[`app/config.json`](app/config.json), which Compose bind-mounts into the container.
-The file is the source of truth, so it can also be edited directly when the service
-is stopped.
+Start with [`app/config.example.json`](app/config.example.json):
+
+```bash
+cp app/config.example.json app/config.json
+```
+
+Use the admin UI for normal changes. Settings are written to your local
+`app/config.json`, which Compose bind-mounts into the container. That file is ignored
+by Git so machine-specific preferences and feed URLs do not appear in the repository.
 
 The main sections are:
 
@@ -135,7 +141,7 @@ supported deployment path.
 - SportsLooper logs to `app/sportslooper.log` and stdout. The file rotates at 1 MB
   with five backups.
 - `pixelcade-runtime/pixelweb-debug.log` is Pixelcade's own log. If it grows quickly,
-  update the example's paths and owning user for your host, then install
+  replace the placeholder path in the example, then install
   [`deploy/logrotate-pixelcade.conf`](deploy/logrotate-pixelcade.conf) as
   `/etc/logrotate.d/pixelcade`.
 - If the admin UI is unreachable, run `docker compose ps` and
@@ -149,7 +155,7 @@ supported deployment path.
 Run the repository's basic syntax check after changing Python code:
 
 ```bash
-python -m py_compile app/*.py sportslooper.py piVersion.py
+python -m py_compile app/*.py
 ```
 
 There is currently no automated test suite.
@@ -158,16 +164,13 @@ There is currently no automated test suite.
 
 ```text
 app/                    Current Docker runtime and admin UI
-app/config.json         Active runtime configuration
+app/config.example.json Defaults for a new local configuration
+app/config.json         Local runtime configuration (ignored by Git)
 deploy/                 Host log-rotation configuration
 docs/                   GitHub Pages landing page
 pixelcade-runtime/      Local Pixelcade installation (ignored by Git)
 prototype/              Local experiments (ignored by Git)
 ```
-
-The root-level `sportslooper.py`, `piVersion.py`, and `sportslooper.ini` are retained
-for older standalone and Raspberry Pi workflows. They are not the current Docker
-runtime and may not include newer modules or recovery behavior.
 
 ## License
 

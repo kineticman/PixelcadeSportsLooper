@@ -8,6 +8,7 @@ service_error.log
 pixelcade.ini
 pixelcade.ini.backup.*
 pixelcade-runtime/
+app/config.json
 
 # Local experiments and generated reverse-engineering captures
 prototype/

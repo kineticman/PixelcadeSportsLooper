@@ -21,12 +21,14 @@ configuration, connection testing, and USB recovery.
 
 ## Quick Start
 
-Install a matching Pixelcade Linux runtime in `pixelcade-runtime/`, then clone and
-start the stack:
+Clone the repository, install a matching Pixelcade Linux runtime in
+`pixelcade-runtime/`, and start the stack:
 
 ```bash
 git clone https://github.com/kineticman/PixelcadeSportsLooper.git
 cd PixelcadeSportsLooper
+test -x pixelcade-runtime/pixelweb
+cp app/config.example.json app/config.json
 docker compose up -d --build
 ```
 

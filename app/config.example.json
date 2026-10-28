@@ -11,10 +11,10 @@
     "auto_recovery": true,
     "auto_recovery_after_seconds": 120,
     "auto_recovery_interval_seconds": 300,
-    "usb_root": "usb8"
+    "usb_root": ""
   },
   "startup": {
-    "banner": "Brad's Bar and Arcade"
+    "banner": "SportsLooper"
   },
   "order": {
     "sequence": [
@@ -24,8 +24,8 @@
     ]
   },
   "weather": {
-    "enabled": true,
-    "zip_code": "43016",
+    "enabled": false,
+    "zip_code": "",
     "duration": 13
   },
   "clock": {
@@ -97,7 +97,7 @@
         "teams": ""
       },
       "usa.1": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "uefa.champions": {
@@ -105,11 +105,11 @@
         "teams": ""
       },
       "college-football": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "mens-college-basketball": {
-        "enabled": true,
+        "enabled": false,
         "teams": ""
       },
       "womens-college-basketball": {

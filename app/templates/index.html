@@ -552,7 +552,7 @@ async function loadConfig() {
 
 function populateAll() {
   // Settings
-  document.getElementById('pixelcadeUrl').value    = cfg.pixelcade?.url ?? 'http://localhost:6992';
+  document.getElementById('pixelcadeUrl').value    = cfg.pixelcade?.url ?? 'http://localhost:8080';
   document.getElementById('healthInterval').value  = cfg.pixelcade?.health_check_interval ?? 30;
   document.getElementById('healthTimeout').value   = cfg.pixelcade?.health_check_timeout ?? 10;
   document.getElementById('requestCooldown').value  = cfg.pixelcade?.request_cooldown_seconds ?? 2;
